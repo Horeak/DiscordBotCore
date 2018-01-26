@@ -260,7 +260,11 @@ class close extends DiscordSubCommand{
 		
 		for(IssueObject ob : objects){
 			IssueHandler.changeStatus(ob, EnumIssueStatus.FIXED, false);
-			DevAccess.msgDevs("```perl\nIssue: " + ob.id + "\n> Has been marked as FIXED by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+			if(objects.size() <= 3) DevAccess.msgDevs("```perl\nIssue: " + ob.id + "\n> Has been marked as FIXED by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+		}
+		
+		if(objects.size() > 3){
+			DevAccess.msgDevs("```perl\n" + objects.size() + " Issues as been marked as FIXED by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 		}
 		
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " The specific issues have been updated!");
@@ -315,8 +319,11 @@ class wip extends DiscordSubCommand{
 		
 		for(IssueObject ob : objects){
 			IssueHandler.changeStatus(ob, EnumIssueStatus.WIP, true);
-			
-			DevAccess.msgDevs("```perl\nIssue: " + ob.id + "\n> Has been marked as WIP by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+			if(objects.size() <= 3)DevAccess.msgDevs("```perl\nIssue: " + ob.id + "\n> Has been marked as WIP by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+		}
+		
+		if(objects.size() > 3){
+			DevAccess.msgDevs("```perl\n" + objects.size() + " Issues as been marked as WIP by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 		}
 		
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " The specific issues have been updated!");
@@ -353,16 +360,19 @@ class delete extends DiscordSubCommand{
 		for(String t : args){
 			if(t.equalsIgnoreCase("all")){
 				for(IssueObject ob : IssueHandler.issueObjects){
-					DevAccess.msgDevs("```perl\nIssue: " + ob + "\n> Has been deleted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+					if(IssueHandler.issueObjects.size() <= 3) DevAccess.msgDevs("```perl\nIssue: " + ob + "\n> Has been deleted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 					IssueHandler.removeIssue(ob);
 					IssueHandler.removeIssueById(ob.id);
+				}
+				
+				if(IssueHandler.issueObjects.size() > 3){
+					DevAccess.msgDevs("```perl\n" + IssueHandler.issueObjects.size() + " Issues as been marked as FIXED by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 				}
 				break;
 			}
 			if(Utils.isInteger(t)){
 				int tg = Integer.parseInt(t);
 				IssueHandler.removeIssueById(tg);
-				
 				DevAccess.msgDevs("```perl\nIssue: " + tg + "\n> Has been deleted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 			}
 		}
