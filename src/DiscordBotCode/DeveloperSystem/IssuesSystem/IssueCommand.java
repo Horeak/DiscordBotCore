@@ -366,7 +366,7 @@ class delete extends DiscordSubCommand{
 				}
 				
 				if(IssueHandler.issueObjects.size() > 3){
-					DevAccess.msgDevs("```perl\n" + IssueHandler.issueObjects.size() + " Issues as been marked as FIXED by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+					DevAccess.msgDevs("```perl\n" + IssueHandler.issueObjects.size() + " Issues as been marked deleted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 				}
 				break;
 			}
@@ -429,7 +429,11 @@ class open extends DiscordSubCommand{
 		
 		for(IssueObject ob : objects){
 			IssueHandler.changeStatus(ob, EnumIssueStatus.OPEN, true);
-			DevAccess.msgDevs("```perl\nIssue: " + ob.id + "\n> Has been marked as OPEN by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+			if(objects.size() <= 3)DevAccess.msgDevs("```perl\nIssue: " + ob.id + "\n> Has been marked as OPEN by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+		}
+		
+		if(objects.size() > 3){
+			DevAccess.msgDevs("```perl\n" + objects.size() + " Issues as been marked as OPEN by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 		}
 		
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " The specific issues have been updated!");
@@ -486,9 +490,12 @@ class mute extends DiscordSubCommand{
 			ob.muted = true;
 			IssueHandler.updateIssue(ob);
 			
-			DevAccess.msgDevs("```perl\nIssue: " + ob.id + "\n> Has been muted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+			if(objects.size() <= 3)DevAccess.msgDevs("```perl\nIssue: " + ob.id + "\n> Has been muted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 		}
 		
+		if(objects.size() > 3){
+			DevAccess.msgDevs("```perl\n" + objects.size() + " Issues as been muted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+		}
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " The specific issues have been updated!");
 	}
 	
