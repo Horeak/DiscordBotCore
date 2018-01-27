@@ -244,10 +244,10 @@ public class CommandUtils
 	public static String[] getArgsFromText( String text, DiscordCommand command, IChannel channel )
 	{
 		String tempReplace = getCommandPrefix(text, command, channel, true);
-		String temp = text.toLowerCase().replace(tempReplace.toLowerCase(), "");
+		String temp = text.substring(tempReplace.length()); //TODO Find a better way incase there is mid sentence commands sometime
 		
-		for(String t : text.split(" ")){
-			temp = temp.replace(t.toLowerCase(), t);
+		if(temp.startsWith(" ")){
+			temp = tempReplace.substring(1);
 		}
 		
 		if(temp.isEmpty()){
