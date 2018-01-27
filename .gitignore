@@ -1,5 +1,1 @@
 *.iml
-*.jar
-libs/*
-target/maven-archiver/pom.properties
-target/
