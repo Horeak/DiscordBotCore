@@ -46,7 +46,6 @@ import java.util.regex.Pattern;
 
 public class DiscordBotBase
 {
-	//TODO Maybe add a option for a custom server access? Can connect using a password set in prop file and can excecute commands from the bot?
 	//TODO Do a proper clean up of old code and make improvements (Special command system code could need a look at)
 	
 	public static final String INFO_FILE_TAG = "INFO_FILE";

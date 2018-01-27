@@ -6,7 +6,6 @@ import sx.blah.discord.handle.obj.IMessage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.time.ZoneId;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,9 +15,7 @@ public class Utils
 	public static Random rand = new Random();
 	
 	public static long getPing( IMessage message){
-		Date date = Date.from(message.getCreationDate().atZone(ZoneId.systemDefault()).toInstant());
-		Date curDate = new Date();
-		return curDate.getTime() - date.getTime();
+		return message.getCreationDate().toEpochMilli() - System.currentTimeMillis();
 	}
 	
 	public static boolean isInteger( String s )

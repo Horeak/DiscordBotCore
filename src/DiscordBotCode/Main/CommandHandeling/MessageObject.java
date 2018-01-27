@@ -7,7 +7,7 @@ import sx.blah.discord.handle.impl.obj.Guild;
 import sx.blah.discord.handle.impl.obj.Message;
 import sx.blah.discord.handle.obj.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,11 +21,11 @@ public class MessageObject extends Message {
 	}
 	
 	public MessageObject(Message message){
-		super(message.getClient(), message.getLongID(), message.getContent(), message.getAuthor(), message.getChannel(), message.getTimestamp(), message.getEditedTimestamp().orElse(null), message.mentionsEveryone(), message.getRawMentionsLong(), message.getRawRoleMentionsLong(), message.getAttachments(), message.isPinned(), getRawEmbeds(message.getEmbeds()), message.getReactions(), message.getWebhookLongID());
+		super(message.getClient(), message.getLongID(), message.getContent(), message.getAuthor(), message.getChannel(), message.getTimestamp(), message.getEditedTimestamp().orElse(null), message.mentionsEveryone(), message.getRawMentionsLong(), message.getRawRoleMentionsLong(), message.getAttachments(), message.isPinned(), getRawEmbeds(message.getEmbeds()), message.getWebhookLongID(), message.getType());
 	}
 	
-	public MessageObject( IDiscordClient client, long id, String content, IUser user, IChannel channel, LocalDateTime timestamp, LocalDateTime editedTimestamp, boolean mentionsEveryone, List<Long> mentions, List<Long> roleMentions, List<Attachment> attachments, boolean pinned, List<Embed> embeds, List<IReaction> reactions, long webhookID ) {
-		super(client, id, content, user, channel, timestamp, editedTimestamp, mentionsEveryone, mentions, roleMentions, attachments, pinned, embeds, reactions, webhookID);
+	public MessageObject( IDiscordClient client, long id, String content, IUser user, IChannel channel, Instant timestamp, Instant editedTimestamp, boolean mentionsEveryone, List<Long> mentions, List<Long> roleMentions, List<Attachment> attachments, boolean pinned, List<Embed> embeds, long webhookID, Type type ) {
+		super(client, id, content, user, channel, timestamp, editedTimestamp, mentionsEveryone, mentions, roleMentions, attachments, pinned, embeds, webhookID, type);
 	}
 	
 	private static List<Embed> getRawEmbeds( List<IEmbed> embeds ){

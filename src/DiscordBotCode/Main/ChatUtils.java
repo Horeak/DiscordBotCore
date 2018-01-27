@@ -8,7 +8,7 @@ import sx.blah.discord.handle.impl.obj.Message;
 import sx.blah.discord.handle.obj.*;
 import sx.blah.discord.util.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,16 +56,17 @@ public class ChatUtils
 				text,                                                      //content
 				user,                 //user
 				channel,                                                   //channel
-				LocalDateTime.now(),                                       //timestamp
+				Instant.now(),                                       //timestamp
 				null,                                       //editedTimestamp
 				text.contains("@everyone"),                                //mentionsEveryone
 				mentions,                                                  //mentions
 				roleMentions,                                              //roleMentions
 				attachments,                                               //attachments
 				pinned,                                             //pinned
-				embeds,                                                    //embedded
-				reactions,                                                 //reactions
-				webhookID);
+				embeds,
+				webhookID,//webhook
+				IMessage.Type.DEFAULT
+				);
 	}
 	
 	private static Message createMessage( String text, IChannel channel, boolean pinned, List<IMessage.Attachment> attachments, List<Embed> embeds, List<IReaction> reactions, Long webhookID )
@@ -116,7 +117,7 @@ public class ChatUtils
 		
 		final IMessage[] message1 = { null };
 		
-		Message messageObject = new Message(DiscordBotBase.discordClient, getMessageSnowflake(chat), message, DiscordBotBase.discordClient.getOurUser(), chat, null, null, false, new ArrayList<>(), new ArrayList<>(), null, false, null, null, 0);
+		Message messageObject = new Message(DiscordBotBase.discordClient, getMessageSnowflake(chat), message, DiscordBotBase.discordClient.getOurUser(), chat, null, null, false, new ArrayList<>(), new ArrayList<>(), null, false, null, 0, IMessage.Type.DEFAULT);
 		if (messageObject != null && messageObject.getContent() != null && !messageObject.getContent().isEmpty()) {
 			MessageBuilder builder = new MessageBuilder(DiscordBotBase.discordClient);
 			builder.withChannel(chat);
