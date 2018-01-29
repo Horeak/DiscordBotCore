@@ -15,7 +15,13 @@ public class Utils
 	public static Random rand = new Random();
 	
 	public static long getPing( IMessage message){
-		return message.getCreationDate().toEpochMilli() - System.currentTimeMillis();
+		Long t = System.currentTimeMillis() - message.getCreationDate().toEpochMilli();
+		
+		//I have no idea why this is an issue but with latest D4j it resulted in a negative value at times
+		if(t < 0){
+			t *= -1;
+		}
+		return t;
 	}
 	
 	public static boolean isInteger( String s )
