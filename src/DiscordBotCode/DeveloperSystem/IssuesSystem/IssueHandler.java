@@ -55,12 +55,13 @@ public class IssueHandler
 					
 					if(object.date > 0){
 						if(System.currentTimeMillis() - object.date >= (object.status == EnumIssueStatus.FIXED ? timeLimit / 4 : timeLimit)){
-							FileUtil.removeLineFromFile(file, e);
+							FileUtil.removeLineFromFile(file, e); //Load issues that has "expired", 30 days for normal issues and about 7 for fixed issues
 							return;
 						}
 					}
-					
-					issueObjects.add(object);
+					if(object != null && (object.saveData() != null && !object.saveData().isEmpty())) {
+						issueObjects.add(object);
+					}
 					
 				}catch (Exception ee){
 					if(ee instanceof ArrayIndexOutOfBoundsException) {
@@ -182,6 +183,10 @@ public class IssueHandler
 	}
 	
 	public static void updateIssue(IssueObject object){
+		if(object == null || !file.exists() || (object != null && object.saveData().isEmpty())){
+			return; //Cant remove the issue if object is null, prevent it from loading instead
+		}
+		
 		FileUtil.removeLineFromFile(file, IssueObject.divider + object.id + IssueObject.divider);
 		FileUtil.addLineToFile(file, object.saveData());
 	}
