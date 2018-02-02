@@ -6,6 +6,7 @@ import DiscordBotCode.Extra.FileUtil;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Misc.LoggerUtil;
+import org.apache.commons.lang3.StringUtils;
 import sx.blah.discord.handle.obj.IUser;
 
 import java.io.File;
@@ -138,8 +139,7 @@ public class IssueHandler
 	
 	public static boolean isEqual(IssueObject object, IssueObject object1){
 		if(object.exceptionIssue && object1.exceptionIssue){
-			if(object.exceptionStackTrace.equalsIgnoreCase(object1.exceptionStackTrace)
-					&& object.id != object1.id){
+			if((object.exceptionStackTrace.equalsIgnoreCase(object1.exceptionStackTrace) || StringUtils.difference(object.exceptionStackTrace, object1.exceptionStackTrace).length() <= 10) && object.id != object1.id){
 				return true;
 			}
 		}
