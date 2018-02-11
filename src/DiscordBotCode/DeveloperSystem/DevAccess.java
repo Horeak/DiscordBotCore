@@ -121,4 +121,16 @@ public class DevAccess
 		}
 	}
 	
+	public static void msgOwner(String message){
+		for(IUser user : getDevs()){
+			if(isOwner(user.getLongID())) {
+				if (devNotifications.containsKey(user.getLongID())) {
+					if (devNotifications.get(user.getLongID())) {
+						ChatUtils.sendMessage(user.getOrCreatePMChannel(), message);
+					}
+				}
+			}
+		}
+	}
+	
 }

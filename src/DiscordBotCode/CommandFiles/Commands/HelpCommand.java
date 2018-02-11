@@ -3,12 +3,14 @@ package DiscordBotCode.CommandFiles.Commands;
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
 import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.CommandFiles.DiscordSubCommand;
+import DiscordBotCode.ICustomSettings;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import org.apache.commons.lang.WordUtils;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
+import sx.blah.discord.util.PermissionUtils;
 
 import java.awt.*;
 import java.util.StringJoiner;
@@ -117,7 +119,24 @@ public class HelpCommand extends DiscordChatCommand
 		}
 		
 		if(command.getRequiredRole(message.getChannel()) != null){
-			embedBuilder.appendField("Required Role", command.getRequiredRole(message.getChannel()).getName(), false);
+			embedBuilder.appendField("Required Role", command.getRequiredRole(message.getChannel()).mention(), false);
+		}
+		
+		if(!message.getChannel().isPrivate() && PermissionUtils.hasPermissions(message.getGuild(), message.getAuthor(), Permissions.ADMINISTRATOR)) {
+			if (command instanceof ICustomSettings) {
+				ICustomSettings settings = (ICustomSettings) command;
+				StringBuilder builder = new StringBuilder();
+				
+				for (String t : settings.getSettings()) {
+					builder.append(t + " = " + settings.getValueOfSetting(message.getGuild(), t) + "\n");
+				}
+				
+				String tg = builder.toString();
+				
+				if (tg.length() > 0) {
+					embedBuilder.appendField("Settings", tg, false);
+				}
+			}
 		}
 		
 		if (command instanceof DiscordChatCommand && ((DiscordChatCommand) command).subCommands.size() > 0) {

@@ -17,7 +17,7 @@ public class PermissionUtils
 	
 	private static boolean overRide(IUser user){
 		if(DiscordBotBase.debug){
-			return true;
+//			return true;
 		}
 		
 		try {

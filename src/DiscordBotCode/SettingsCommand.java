@@ -18,6 +18,7 @@ public class SettingsCommand extends DiscordChatCommand{
 	public SettingsCommand() {
 		subCommands.add(new prefix(this));
 		subCommands.add(new role(this));
+		subCommands.add(new commandSettings(this));
 	}
 	
 	@Override
@@ -40,8 +41,86 @@ public class SettingsCommand extends DiscordChatCommand{
 	}
 	
 	@Override
+	public boolean canCommandBePrivateChat() {
+		return false;
+	}
+	
+	@Override
 	protected Permissions[] getRequiredPermissions() {
 		return new Permissions[]{Permissions.ADMINISTRATOR};
+	}
+	
+	class commandSettings extends DiscordSubCommand{
+		public commandSettings( DiscordChatCommand baseCommand ) {
+			super(baseCommand);
+		}
+		
+		@Override
+		public String commandPrefix() {
+			return "commandSettings";
+		}
+		
+		@Override
+		public void commandExecuted( IMessage message, String[] args ) {
+			String text = String.join(" ", args);
+			
+			DiscordCommand command = CommandUtils.getDiscordCommand(text, message.getChannel());
+			
+			if(command != null) {
+				if(command instanceof DiscordChatCommand){
+					text = text.replace(((DiscordChatCommand)command).getCommandSign(message.getChannel()) + command.commandPrefix(), "");
+					
+				}else if(command instanceof DiscordSubCommand){
+					text = text.replace((((DiscordSubCommand) command).baseCommand).getCommandSign(message.getChannel()) + command.commandPrefix(), "");
+					
+				}
+				
+				text = text.replace(command.commandPrefix(), "");
+				
+				for(String tg : command.commandPrefixes()){
+					text = text.replace(tg, "");
+				}
+			}
+			
+			while(text.startsWith(" ")){
+				text = text.substring(1);
+			}
+			
+			if(command != null && command instanceof ICustomSettings){
+				ICustomSettings settings = (ICustomSettings)command;
+				
+				if(settings != null) {
+					String[] arg = text.split(" ");
+					
+					if(arg.length > 0) {
+						for (String t : settings.getSettings()) {
+							if (arg[ 0 ].equalsIgnoreCase(t)){
+								
+								String[] arg1 = new String[arg.length];
+								System.arraycopy(arg, 1, arg1, 0, arg.length - 1);
+								
+								if(settings.canUpdateSetting(message, arg1)){
+									settings.updateSetting(message, arg1, t);
+									ChatUtils.sendMessage(message.getChannel(), "The setting \"" + t + "\" has been updated!");
+									return;
+								}else{
+									ChatUtils.sendMessage(message.getChannel(), "Unable to update \"" + t + "\"");
+									return;
+								}
+							}
+						}
+					}
+				}
+				
+			}else{
+				ChatUtils.sendMessage(message.getChannel(), "Invalid input command!");
+			}
+		}
+		
+		@Override
+		public boolean canExecute( IMessage message, String[] args ) {
+			return true;
+		}
 	}
 	
 	class prefix extends DiscordSubCommand{
@@ -149,6 +228,8 @@ public class SettingsCommand extends DiscordChatCommand{
 					}
 				}
 			}
+			
+			commands.removeIf((c) -> !c.canAssignRole());
 			
 			if(role == null) {
 				for (IRole role1 : message.getGuild().getRoles()) {

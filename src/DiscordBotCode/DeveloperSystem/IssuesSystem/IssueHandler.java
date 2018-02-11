@@ -139,7 +139,7 @@ public class IssueHandler
 	
 	public static boolean isEqual(IssueObject object, IssueObject object1){
 		if(object.exceptionIssue && object1.exceptionIssue){
-			if((object.exceptionStackTrace.equalsIgnoreCase(object1.exceptionStackTrace) || StringUtils.difference(object.exceptionStackTrace, object1.exceptionStackTrace).length() <= 10) && object.id != object1.id){
+			if((object.exceptionStackTrace.equalsIgnoreCase(object1.exceptionStackTrace) || StringUtils.difference(object.exceptionStackTrace, object1.exceptionStackTrace).length() <= 30) && object.id != object1.id){
 				return true;
 			}
 		}

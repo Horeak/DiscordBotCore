@@ -3,12 +3,14 @@ package DiscordBotCode.Main.CommandHandeling;
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
 import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.CommandFiles.DiscordSubCommand;
+import DiscordBotCode.DeveloperSystem.DevCommandBase;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.Events.CommandInputEvents;
 import DiscordBotCode.Main.CustomEvents.CommandExecutedEvent;
 import DiscordBotCode.Main.CustomEvents.CommandFailedExecuteEvent;
 import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.DiscordModule;
+import DiscordBotCode.Main.PermissionUtils;
 import sx.blah.discord.handle.impl.obj.Message;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
@@ -35,7 +37,7 @@ public class CommandUtils
 	}
 	
 	/**
-	 * @param internal Disables built in permissions system to allow commands to be excecuted by the bot itself or from self constructed messages
+	 * @param internal Disables built in permissions system to allow commands to be excec<uted by the bot itself or from self constructed messages
 	 */
 	public static void executeCommand( IMessage m1T, boolean internal )
 	{
@@ -78,7 +80,13 @@ public class CommandUtils
 				}
 			}else{
 				if(DiscordBotBase.extraFeedback) {
-					ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You do not have permission to use this command!");
+					if(command.getRequiredRole(m1.getChannel()) != null){
+						if(!PermissionUtils.hasRole(m1.getAuthor(), m1.getGuild(), command.getRequiredRole(m1.getChannel()), true)){
+							ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You must be ` " + command.getRequiredRole(m1.getChannel()).getName() + " ` or above to use this command!");
+						}
+					}else {
+						ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You do not have the required permissions to use this command!");
+					}
 				}
 			}
 		}
@@ -192,8 +200,14 @@ public class CommandUtils
 		}
 		
 		for (DiscordChatCommand command : discordChatCommands.values()) {
-			if(compareCommandPrefix(text, command, chat, checkSign)){
-				return command;
+			if(command instanceof DevCommandBase){ //Allows dev and non dev commands to use the same prefix without issues on help command
+				if (compareCommandPrefix(text, command, chat, true)) {
+					return command;
+				}
+			}else {
+				if (compareCommandPrefix(text, command, chat, checkSign)) {
+					return command;
+				}
 			}
 		}
 		return null;

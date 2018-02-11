@@ -142,15 +142,16 @@ public class IssueCommand extends DiscordChatCommand
 					}
 				}
 				
-				if(builder.toString().length() >= 1900){
+				int max = 1500;
+				
+				
+				if(builder.toString().length() >= max){
 					multi = true;
 					builder.append("\nPage: [ " + page + " / " + pages + " ]");
 				}
 				
 				if (multi) {
 					int cur = 0;
-					int max = 1800;
-					
 					builders.add(new StringBuilder());
 					
 					String[] g = builder.toString().split("\n");
