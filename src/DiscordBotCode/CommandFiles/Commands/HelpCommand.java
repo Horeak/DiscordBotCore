@@ -6,6 +6,7 @@ import DiscordBotCode.CommandFiles.DiscordSubCommand;
 import DiscordBotCode.ICustomSettings;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
+import DiscordBotCode.Setting;
 import org.apache.commons.lang.WordUtils;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.Permissions;
@@ -91,7 +92,7 @@ public class HelpCommand extends DiscordChatCommand
 		
 		if(command.commandPrefixes().length > 1) embedBuilder.appendField("Prefixes", String.join(", ", command.commandPrefixes()), false);
 		
-		embedBuilder.withDescription("'" + WordUtils.capitalize(command.commandPrefix()) + "' command");
+		embedBuilder.withDescription("**`'" + WordUtils.capitalize(command.commandPrefix()) + "'` command**");
 		
 		if(command instanceof DiscordSubCommand){
 			DiscordChatCommand command1 = ((DiscordSubCommand)command).baseCommand;
@@ -127,8 +128,9 @@ public class HelpCommand extends DiscordChatCommand
 				ICustomSettings settings = (ICustomSettings) command;
 				StringBuilder builder = new StringBuilder();
 				
-				for (String t : settings.getSettings()) {
-					builder.append(t + " = " + settings.getValueOfSetting(message.getGuild(), t) + "\n");
+				for (Setting t : settings.getSettings()) {
+					String value = settings.getValueOfSetting(message.getGuild(), t.getKey(), command);
+					builder.append(t.getKey() + " = " + (value != null && !value.isEmpty() ? value : "[" + t.getType().name().toUpperCase() + "]") + "\n");
 				}
 				
 				String tg = builder.toString();
@@ -145,6 +147,11 @@ public class HelpCommand extends DiscordChatCommand
 				if(t.length() >= EmbedBuilder.FIELD_CONTENT_LIMIT) t = t.substring(0, EmbedBuilder.FIELD_CONTENT_LIMIT - 4) + "...";
 				embedBuilder.appendField("Sub-commands", t, false);
 			}
+		}
+		
+		if(embedBuilder.getFieldCount() == 0){
+			ChatUtils.sendMessage(message.getChannel(), "**No info available for `" + WordUtils.capitalize(command.commandPrefix()) + "`**");
+			return;
 		}
 		
 		ChatUtils.sendMessage(message.getChannel(), embedBuilder.build());

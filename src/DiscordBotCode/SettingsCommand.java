@@ -65,20 +65,28 @@ public class SettingsCommand extends DiscordChatCommand{
 			String text = String.join(" ", args);
 			
 			DiscordCommand command = CommandUtils.getDiscordCommand(text, message.getChannel());
+			ArrayList<String> replaces = new ArrayList<>();
+			
 			
 			if(command != null) {
 				if(command instanceof DiscordChatCommand){
-					text = text.replace(((DiscordChatCommand)command).getCommandSign(message.getChannel()) + command.commandPrefix(), "");
+					String t = ((DiscordChatCommand)command).getCommandSign(message.getChannel()) + command.commandPrefix();
+					
+					if(!replaces.contains(t)) {
+						text = text.replaceFirst(t, "");
+						replaces.add(t);
+						replaces.add(command.commandPrefix());
+					}
 					
 				}else if(command instanceof DiscordSubCommand){
-					text = text.replace((((DiscordSubCommand) command).baseCommand).getCommandSign(message.getChannel()) + command.commandPrefix(), "");
+					String t = (((DiscordSubCommand) command).baseCommand).getCommandSign(message.getChannel()) + command.commandPrefix();
 					
-				}
-				
-				text = text.replace(command.commandPrefix(), "");
-				
-				for(String tg : command.commandPrefixes()){
-					text = text.replace(tg, "");
+					if(replaces.contains(t)) {
+						text = text.replaceFirst(t, "");
+						replaces.add(t);
+						replaces.add(command.commandPrefix());
+					}
+					
 				}
 			}
 			
@@ -93,15 +101,15 @@ public class SettingsCommand extends DiscordChatCommand{
 					String[] arg = text.split(" ");
 					
 					if(arg.length > 0) {
-						for (String t : settings.getSettings()) {
-							if (arg[ 0 ].equalsIgnoreCase(t)){
+						for (Setting t : settings.getSettings()) {
+							if (arg[ 0 ].equalsIgnoreCase(t.getKey())){
 								
 								String[] arg1 = new String[arg.length];
 								System.arraycopy(arg, 1, arg1, 0, arg.length - 1);
 								
 								if(settings.canUpdateSetting(message, arg1)){
-									settings.updateSetting(message, arg1, t);
-									ChatUtils.sendMessage(message.getChannel(), "The setting \"" + t + "\" has been updated!");
+									settings.updateSetting(message, arg1, t, command);
+									ChatUtils.sendMessage(message.getChannel(), "The setting \"" + t.getKey() + "\" has been updated!");
 									return;
 								}else{
 									ChatUtils.sendMessage(message.getChannel(), "Unable to update \"" + t + "\"");
