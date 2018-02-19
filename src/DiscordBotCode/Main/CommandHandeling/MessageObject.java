@@ -1,31 +1,47 @@
 package DiscordBotCode.Main.CommandHandeling;
 
-import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.handle.impl.obj.Channel;
 import sx.blah.discord.handle.impl.obj.Embed;
 import sx.blah.discord.handle.impl.obj.Guild;
 import sx.blah.discord.handle.impl.obj.Message;
-import sx.blah.discord.handle.obj.*;
+import sx.blah.discord.handle.obj.IChannel;
+import sx.blah.discord.handle.obj.IEmbed;
+import sx.blah.discord.handle.obj.IGuild;
+import sx.blah.discord.handle.obj.IMessage;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
 public class MessageObject extends Message {
-	private Guild guild;
-	private Channel post_channel;
-	private boolean deletable = true;
+	protected Guild guild;
+	protected Channel post_channel;
+	protected boolean deletable = true;
+	
+	private ChannelObject channelObject;
 	
 	public MessageObject(IMessage message){
 		this((Message)message);
 	}
 	
 	public MessageObject(Message message){
-		super(message.getClient(), message.getLongID(), message.getContent(), message.getAuthor(), message.getChannel(), message.getTimestamp(), message.getEditedTimestamp().orElse(null), message.mentionsEveryone(), message.getRawMentionsLong(), message.getRawRoleMentionsLong(), message.getAttachments(), message.isPinned(), getRawEmbeds(message.getEmbeds()), message.getWebhookLongID(), message.getType());
-	}
-	
-	public MessageObject( IDiscordClient client, long id, String content, IUser user, IChannel channel, Instant timestamp, Instant editedTimestamp, boolean mentionsEveryone, List<Long> mentions, List<Long> roleMentions, List<Attachment> attachments, boolean pinned, List<Embed> embeds, long webhookID, Type type ) {
-		super(client, id, content, user, channel, timestamp, editedTimestamp, mentionsEveryone, mentions, roleMentions, attachments, pinned, embeds, webhookID, type);
+		super(message.getClient(),
+				message.getLongID(),
+				message.getContent(),
+				message.getAuthor(),
+				message.getChannel(),
+				message.getTimestamp(),
+				message.getEditedTimestamp().orElse(null),
+				message.mentionsEveryone(),
+				message.getRawMentionsLong(),
+				message.getRawRoleMentionsLong(),
+				message.getAttachments(),
+				message.isPinned(),
+				getRawEmbeds(message.getEmbeds()),
+				message.getWebhookLongID(),
+				message.getType());
+		
+		channelObject = new ChannelObject(message.getChannel());
+		channelObject.source = this;
 	}
 	
 	private static List<Embed> getRawEmbeds( List<IEmbed> embeds ){
@@ -42,6 +58,11 @@ public class MessageObject extends Message {
 	@Override
 	public IGuild getGuild() {
 		return this.guild == null ? super.getGuild() : guild;
+	}
+	
+	@Override
+	public IChannel getChannel() {
+		return channelObject;
 	}
 	
 	public Channel getPost_channel(){

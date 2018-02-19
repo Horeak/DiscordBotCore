@@ -16,6 +16,7 @@ import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
@@ -125,9 +126,11 @@ public class CommandUtils
 			Field fiel = Message.class.getDeclaredField(key);
 			
 			if(fiel != null){
-				fiel.setAccessible(true);
-				messageFields.put(key, fiel);
-				return true;
+				if(Modifier.isProtected(fiel.getModifiers())) { //All fields that are changeable are protected, therefor private fields can be used to unchangeable values
+					fiel.setAccessible(true);
+					messageFields.put(key, fiel);
+					return true;
+				}
 			}
 			
 		} catch (NoSuchFieldException ignored) {}

@@ -3,6 +3,7 @@ package DiscordBotCode.CommandFiles.Commands;
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
 import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.Main.ChatUtils;
+import DiscordBotCode.Main.DiscordBotBase;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.StatusType;
@@ -33,9 +34,19 @@ public class MembersCommand extends DiscordChatCommand {
 			}
 		}
 		
-		builder.appendField("Members", Integer.toString(message.getGuild().getUsers().size()), true);
-		builder.appendField("Online", Integer.toString(online), true);
+		int members = message.getGuild().getUsers().size();
+		int number = online;
 		
+		float per = (float)number / (float)members;
+		
+		builder.withAuthorIcon(DiscordBotBase.discordClient.getOurUser().getAvatarURL());
+		builder.withAuthorName(DiscordBotBase.discordClient.getOurUser().getDisplayName(message.getGuild()));
+		
+		builder.withTimestamp(System.currentTimeMillis());
+		builder.withFooterText((int)(per * 100) + "% Online");
+		
+		builder.withDescription("```ml\nMembers: " + members + "\nOnline:  " + number + "```");
+
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention(), builder.build());
 	}
 	

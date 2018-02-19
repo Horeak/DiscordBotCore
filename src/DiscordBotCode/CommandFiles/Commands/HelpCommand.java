@@ -8,6 +8,7 @@ import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Setting;
 import org.apache.commons.lang.WordUtils;
+import org.apache.commons.lang3.StringUtils;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
@@ -128,9 +129,23 @@ public class HelpCommand extends DiscordChatCommand
 				ICustomSettings settings = (ICustomSettings) command;
 				StringBuilder builder = new StringBuilder();
 				
+				int longest = 0;
+
+				for (Setting t : settings.getSettings()) {
+					if(t.getKey().length() > longest){
+						longest = t.getKey().length();
+					}
+				}
+				
 				for (Setting t : settings.getSettings()) {
 					String value = settings.getValueOfSetting(message.getGuild(), t.getKey(), command);
-					builder.append(t.getKey() + " = " + (value != null && !value.isEmpty() ? value : "[" + t.getType().name().toUpperCase() + "]") + "\n");
+					builder.append("`\n" + t.getKey());
+					
+					builder.append(StringUtils.repeat(' ', (longest + 3) - t.getKey().length()));
+					
+					builder.append("=`\t");
+					
+					builder.append(value != null && !value.isEmpty() ? value : "[" + t.getType().name().toUpperCase() + "]").append("\n");
 				}
 				
 				String tg = builder.toString();
@@ -167,7 +182,6 @@ public class HelpCommand extends DiscordChatCommand
 	@Override
 	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 	{
-		
 		return null;
 	}
 }

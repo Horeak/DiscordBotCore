@@ -32,7 +32,5 @@ public class BaseCommandRegister implements IListener<InitCommandRegisterEvent>
 		DiscordBotBase.registerCommand(MembersCommand.class, "membersCommand");
 		
 		DiscordBotBase.registerCommand(DevModeCommand.class, "devModeCommand");
-		
-		
 	}
 }
