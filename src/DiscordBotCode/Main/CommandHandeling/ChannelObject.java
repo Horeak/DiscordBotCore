@@ -7,6 +7,7 @@ import sx.blah.discord.handle.obj.IGuild;
 
 public class ChannelObject extends Channel {
 	protected MessageObject source;
+	private boolean isPrivate;
 	
 	public ChannelObject( IChannel channel)
 	{
@@ -18,18 +19,29 @@ public class ChannelObject extends Channel {
 		super((DiscordClientImpl) channel.getClient(),
 				channel.getName(),
 				channel.getLongID(),
-				channel.getGuild(),
-				channel.getTopic(),
-				channel.getPosition(),
-				channel.isNSFW(),
+				channel.isPrivate() ? null : channel.getGuild(),
+				channel.isPrivate() ? null : channel.getTopic(),
+				channel.isPrivate() ? 0 : channel.getPosition(),
+				!channel.isPrivate() && channel.isNSFW(),
 				channel.getCategory() != null ? channel.getCategory().getLongID() : -1,
-				channel.roleOverrides,
-				channel.userOverrides);
+				channel.isPrivate() ? null : channel.roleOverrides,
+				channel.isPrivate() ? null : channel.userOverrides);
+		
+		this.isPrivate = channel.isPrivate();
 	}
 	
 	@Override
 	public IGuild getGuild()
 	{
+		if(isPrivate()){
+			return null;
+		}
+		
 		return source != null && source.guild != null ? source.guild : super.guild;
+	}
+	
+	@Override
+	public boolean isPrivate() {
+		return isPrivate || guild == null && (source == null || source.guild == null);
 	}
 }

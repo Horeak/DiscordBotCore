@@ -5,6 +5,7 @@ import DiscordBotCode.Main.CommandHandeling.MessageObject;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.obj.Embed;
 import sx.blah.discord.handle.impl.obj.Message;
+import sx.blah.discord.handle.impl.obj.PrivateChannel;
 import sx.blah.discord.handle.obj.*;
 import sx.blah.discord.util.*;
 
@@ -101,8 +102,8 @@ public class ChatUtils
 			return null;
 		}
 		
-		if(chat.isPrivate() && ((IPrivateChannel)chat).getRecipient() != null){
-			if(((IPrivateChannel)chat).getRecipient().isBot()){
+		if(chat.isPrivate() && ((PrivateChannel)chat).getRecipient() != null){
+			if(((PrivateChannel)chat).getRecipient().isBot()){
 				return null;
 			}
 		}

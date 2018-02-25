@@ -40,8 +40,10 @@ public class MessageObject extends Message {
 				message.getWebhookLongID(),
 				message.getType());
 		
-		channelObject = new ChannelObject(message.getChannel());
-		channelObject.source = this;
+		if(!channel.isPrivate()) {
+			channelObject = new ChannelObject(message.getChannel());
+			channelObject.source = this;
+		}
 	}
 	
 	private static List<Embed> getRawEmbeds( List<IEmbed> embeds ){
@@ -62,7 +64,7 @@ public class MessageObject extends Message {
 	
 	@Override
 	public IChannel getChannel() {
-		return channelObject;
+		return (channel == null) ? (channel) : (channel.isPrivate() ? channel : channelObject); //This is a cheaty fix, maybe look into making a privatechannelobject
 	}
 	
 	public Channel getPost_channel(){
