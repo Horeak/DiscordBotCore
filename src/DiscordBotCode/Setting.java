@@ -1,6 +1,6 @@
 package DiscordBotCode;
 
-public class Setting {
+public class Setting<T> {
 	public enum SettingType{
 		Channel,
 		Role,
@@ -11,14 +11,14 @@ public class Setting {
 	
 	private SettingType type;
 	private String key;
-	private Object defValue;
+	private T defValue;
 	
 	public Setting( SettingType type, String key ) {
 		this.type = type;
 		this.key = key;
 	}
 	
-	public Setting( SettingType type, String key, Object defValue ) {
+	public Setting( SettingType type, String key, T defValue ) {
 		this.type = type;
 		this.key = key;
 		this.defValue = defValue;
@@ -32,7 +32,7 @@ public class Setting {
 		return key;
 	}
 	
-	public Object getDefValue() {
+	public T getDefValue() {
 		return defValue;
 	}
 	

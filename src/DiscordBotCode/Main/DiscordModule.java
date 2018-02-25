@@ -23,7 +23,7 @@ public class DiscordModule implements IModule
 	{
 		System.out.println("Enabling module \"" + name + "\" version [" + version + "]");
 		for (Class command : commands) {
-			DiscordBotBase.registerCommand(command, command.getSimpleName());
+			DiscordBotBase.registerCommand(command, command.getName());
 		}
 		
 		return true;
