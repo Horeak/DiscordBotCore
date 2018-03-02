@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MessageObject extends Message {
+	//TODO Consider overriding guild object to use for filtering roles
+	
 	protected Guild guild;
 	protected Channel post_channel;
 	protected boolean deletable = true;

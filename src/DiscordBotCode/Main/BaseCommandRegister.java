@@ -28,6 +28,7 @@ public class BaseCommandRegister implements IListener<InitCommandRegisterEvent>
 		
 		DiscordBotBase.registerCommand(BotStatusCommand.class, "botStatusCommand");
 		DiscordBotBase.registerCommand(SettingsCommand.class, "settingsCommand");
+		DiscordBotBase.registerCommand(IgnoredRolesCommand.class, "ignoredRolesCommand");
 		
 		DiscordBotBase.registerCommand(MembersCommand.class, "membersCommand");
 		

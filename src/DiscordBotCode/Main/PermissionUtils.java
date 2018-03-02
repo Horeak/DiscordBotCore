@@ -17,7 +17,7 @@ public class PermissionUtils
 	
 	private static boolean overRide(IUser user){
 		if(DiscordBotBase.debug){
-//			return true;
+			return true;
 		}
 		
 		try {
@@ -37,9 +37,9 @@ public class PermissionUtils
 		ArrayList<IRole> list = new ArrayList<>();
 		list.addAll(roles);
 		
-		if(DiscordBotBase.ignoredRoles.containsKey(guild.getLongID())) {
+		if(DiscordBotBase.data().get().getIgnoredRoles().containsKey(guild.getLongID())) {
 			list.removeIf(( role ) -> {
-				for (String t : DiscordBotBase.ignoredRoles.get(guild.getLongID())){
+				for (String t : DiscordBotBase.data().get().getGuildIgnoredRoles(guild)){
 					if(role.getName().matches(t)){
 						return true;
 					}

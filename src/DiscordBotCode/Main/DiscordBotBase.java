@@ -15,6 +15,8 @@ import DiscordBotCode.Main.CustomEvents.CommandRegisterEvent;
 import DiscordBotCode.Main.CustomEvents.CommandRemoveEvent;
 import DiscordBotCode.Main.CustomEvents.InitEvents.InitCommandRegisterEvent;
 import DiscordBotCode.Main.CustomEvents.InitEvents.InitModuleRegisterEvent;
+import DiscordBotCode.Misc.Config.Data;
+import DiscordBotCode.Misc.Config.GsonDataManager;
 import DiscordBotCode.Misc.LoggerUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
@@ -35,12 +37,10 @@ import sx.blah.discord.util.BotInviteBuilder;
 import javax.management.ReflectionException;
 import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.StringJoiner;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -73,8 +73,6 @@ public class DiscordBotBase
 	
 	private static ArrayList<String> args = null;
 	
-	public static ConcurrentHashMap<Long, ArrayList<String>> ignoredRoles = new ConcurrentHashMap<>();
-	
 	public static void main(String[] args)
 	{
 		DLLCleaner.clean();
@@ -94,7 +92,6 @@ public class DiscordBotBase
 			initBot();
 
 			initSubBot();
-			initRoleIgnores();
 		}catch (Exception e){
 			handleException(e);
 		}
@@ -140,29 +137,7 @@ public class DiscordBotBase
 		waitForReady();
 		System.out.println("Bot init done.");
 	}
-	
-	private static void initRoleIgnores() throws IOException {
-		File infoFile = FileUtil.getFileFromStream(ClassLoader.getSystemResourceAsStream("ignored_roles.properties"), ".properties");
-		
-		final int[] roles = { 0 };
-		
-		Files.lines(infoFile.toPath()).forEach(( e ) -> {
-			String[] t = e.split("\\|\\$");
-			
-			if(Utils.isLong(t[0])){
-				if(!ignoredRoles.containsKey(Long.parseLong(t[0]))){
-					ignoredRoles.put(Long.parseLong(t[0]), new ArrayList<>());
-				}
-				
-				ignoredRoles.get(Long.parseLong(t[0])).add(t[1]);
-				roles[ 0 ] += 1;
-			}
-		});
-		
-		System.out.println("Added " + roles[0] + " role ignore rules across " + ignoredRoles.size() + " guilds.");
-		System.out.println("Role ignore init done.");
-	}
-	
+
 	private static void initVersion() throws IOException
 	{
 		File versionFile = FileUtil.getFileFromStream(ClassLoader.getSystemResourceAsStream(FileUtil.getValue(INFO_FILE_TAG, "version_file")), ".properties");
@@ -253,6 +228,20 @@ public class DiscordBotBase
 		Runtime.getRuntime().addShutdownHook(new Thread(DiscordBotBase::onBotClose));
 		
 		System.out.println("Startup init done.");
+	}
+	
+	private static GsonDataManager<Data> data;
+	
+	public static GsonDataManager<Data> data() {
+		if (data == null) {
+			try {
+				data = new GsonDataManager<>(Data.class, DiscordBotBase.FilePath + "/data.json", Data::new);
+			} catch (IOException e) {
+				System.err.println("Cannot read from config file?");
+				e.printStackTrace();
+			}
+		}
+		return data;
 	}
 	
 	public static void waitForReady(){
