@@ -188,7 +188,14 @@ public interface ICustomSettings {
 				ServerSettings.setValue(message.getGuild(), CommandUtils.getKeyFromCommand(command) + "$" + setting.getKey(), user.getStringID());
 			}
 		}else if(setting.getType() == Setting.SettingType.Text){
-			ServerSettings.setValue(message.getGuild(), CommandUtils.getKeyFromCommand(command) + "$" + setting.getKey(), String.join(" ", args));
+			StringBuilder builder = new StringBuilder(" ");
+			for(String t : args) if(t != null && !t.isEmpty()) builder.append(t);
+			String tg = builder.toString();
+			
+			while(tg.startsWith(" ")) tg = tg.substring(1);
+			while(tg.endsWith(" ")) tg = tg.substring(0, tg.length() - 1);
+			
+			ServerSettings.setValue(message.getGuild(), CommandUtils.getKeyFromCommand(command) + "$" + setting.getKey(), tg);
 			
 		}else if(setting.getType() == Setting.SettingType.State){
 			boolean tg = false;

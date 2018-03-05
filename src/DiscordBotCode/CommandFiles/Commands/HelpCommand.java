@@ -97,7 +97,7 @@ public class HelpCommand extends DiscordChatCommand
 		
 		if(command instanceof DiscordSubCommand){
 			DiscordChatCommand command1 = ((DiscordSubCommand)command).baseCommand;
-			embedBuilder.withDescription("Sub-command of \"" + command1.commandPrefix() + "\"");
+			embedBuilder.withDescription("Sub-command of \"" + WordUtils.capitalize(command1.commandPrefix()) + "\"");
 		}
 		
 		if(command.getUsage(this, message) != null) {
@@ -105,7 +105,7 @@ public class HelpCommand extends DiscordChatCommand
 			
 			if(command instanceof DiscordSubCommand){
 				DiscordChatCommand command1 = ((DiscordSubCommand)command).baseCommand;
-				usage = command1.commandPrefix() + " " + usage;
+				usage = WordUtils.capitalize(command1.commandPrefix()) + " " + usage;
 			}
 			
 			embedBuilder.appendField("Usage", "> \"" + usage + "\"", false);

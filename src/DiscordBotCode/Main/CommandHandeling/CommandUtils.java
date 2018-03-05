@@ -20,6 +20,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -344,15 +345,15 @@ public class CommandUtils
 	public static String getKeyFromCommand(DiscordCommand command){
 		if(command instanceof DiscordSubCommand){
 			DiscordSubCommand subCommand = (DiscordSubCommand)command;
-			
+
 			for (Map.Entry<String, DiscordChatCommand> ent : discordChatCommands.entrySet()) {
-				if (subCommand.baseCommand == ent.getValue()) {
+				if (Objects.equals(subCommand.baseCommand.getClass().getName(), ent.getValue().getClass().getName())) {
 					return ent.getKey() + ":" + subCommand.commandPrefix();
 				}
 			}
 		}else {
 			for (Map.Entry<String, DiscordChatCommand> ent : discordChatCommands.entrySet()) {
-				if (command == ent.getValue()) {
+				if (Objects.equals(command.getClass().getName(), ent.getValue().getClass().getName())) {
 					return ent.getKey();
 				}
 			}
