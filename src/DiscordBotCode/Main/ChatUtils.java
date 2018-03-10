@@ -2,6 +2,7 @@ package DiscordBotCode.Main;
 
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.CommandHandeling.MessageObject;
+import DiscordBotCode.Misc.Requests;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.obj.Embed;
 import sx.blah.discord.handle.impl.obj.Message;
@@ -96,7 +97,7 @@ public class ChatUtils
 		return System.currentTimeMillis() + Utils.rand.nextLong();
 	}
 	
-	public static IMessage sendMessage( IChannel chat, String message, MessageBuilder.Styles styles, boolean useTTS )
+	public static IMessage sendMessage( IChannel chat, String message, MessageBuilder.Styles styles, boolean useTTS, boolean buffer )
 	{
 		if(chat == null){
 			return null;
@@ -131,15 +132,13 @@ public class ChatUtils
 			
 			if(useTTS) builder.withTTS();
 			
-			RequestBuffer.request(() -> {
-				try {
-					if (builder.getContent() != null && !builder.getContent().isEmpty() && builder.getChannel() != null) {
-						    message1[ 0 ] = builder.build();
-					    }
-				} catch (DiscordException | MissingPermissionsException e) {
-					DiscordBotBase.handleException(e);
+			Requests.executeRequest(() -> {
+				if (builder.getContent() != null && !builder.getContent().isEmpty() && builder.getChannel() != null) {
+					message1[ 0 ] = builder.build();
 				}
-			});
+				
+				return true;
+			}, buffer);
 		}
 		
 		return message1[0];
@@ -174,7 +173,7 @@ public class ChatUtils
 	
 	public static IMessage sendMessage( IChannel chat, String message, MessageBuilder.Styles styles )
 	{
-		return sendMessage(chat, message, styles, false);
+		return sendMessage(chat, message, styles, false, true);
 	}
 	
 	public static IMessage sendMessage( IChannel channel, String title, EmbedObject object, boolean tts){

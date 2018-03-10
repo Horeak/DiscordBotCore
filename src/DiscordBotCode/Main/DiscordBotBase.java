@@ -1,6 +1,7 @@
 package DiscordBotCode.Main;
 
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
+import DiscordBotCode.CommandFiles.PageSystem.ReactionEvent;
 import DiscordBotCode.DeveloperSystem.DevAccess;
 import DiscordBotCode.Extra.FileGetter;
 import DiscordBotCode.Extra.FileUtil;
@@ -200,6 +201,8 @@ public class DiscordBotBase
 			
 			discordClient.getDispatcher().registerListener(new CommandInputEvents.messageListener());
 			discordClient.getDispatcher().registerListener(new CommandInputEvents.messageEditedListener());
+			discordClient.getDispatcher().registerListener(new ReactionEvent());
+			
 			
 			StringJoiner joiner = new StringJoiner(", ");
 			DiscordBotBase.discordClient.getGuilds().forEach(( g ) -> joiner.add(g.getName()));
@@ -223,6 +226,7 @@ public class DiscordBotBase
 			
 			discordClient.getDispatcher().dispatch(new InitModuleRegisterEvent());
 			discordClient.getDispatcher().dispatch(new InitCommandRegisterEvent());
+			
 		}).start();
 		
 		Runtime.getRuntime().addShutdownHook(new Thread(DiscordBotBase::onBotClose));

@@ -257,7 +257,7 @@ public class SettingsCommand extends DiscordChatCommand{
 				
 				if(ServerSettings.valueExsists(message.getGuild(), key) && role == null){
 					ServerSettings.removeValue(message.getGuild(), key);
-					ChatUtils.sendMessage(message.getChannel(), "The assigned role for the `" + dc.commandPrefix() + "` command has been removed!");
+					if(commands.size() > 1) ChatUtils.sendMessage(message.getChannel(), "The assigned role for the `" + dc.commandPrefix() + "` command has been removed!");
 					deleted = true;
 					continue;
 				}
@@ -271,7 +271,7 @@ public class SettingsCommand extends DiscordChatCommand{
 			if(found){
 				ChatUtils.sendMessage(message.getChannel(), "The role has been assigned to the specific commands!");
 			}else if(!found && deleted){
-				ChatUtils.sendMessage(message.getChannel(), "The specific commands have had their roles unassigned!");
+				ChatUtils.sendMessage(message.getChannel(), "The specific command(s) have had their roles unassigned!");
 			}else if(role == null){
 				ChatUtils.sendMessage(message.getChannel(), "Please specify a role to assign!");
 			}else if(commands.size() <= 0){
