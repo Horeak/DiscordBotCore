@@ -1,8 +1,6 @@
 package DiscordBotCode.Main;
 
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
 import DiscordBotCode.CommandFiles.PageSystem.ReactionEvent;
-import DiscordBotCode.DeveloperSystem.DevAccess;
 import DiscordBotCode.Extra.FileGetter;
 import DiscordBotCode.Extra.FileUtil;
 import DiscordBotCode.Extra.TimeUtil;
@@ -12,17 +10,10 @@ import DiscordBotCode.Main.CommandHandeling.Formatters.CommandDataFormat;
 import DiscordBotCode.Main.CommandHandeling.Formatters.IgnoredMessageFormat;
 import DiscordBotCode.Main.CommandHandeling.Formatters.MentionsMessageFormat;
 import DiscordBotCode.Main.CustomEvents.BotCloseEvent;
-import DiscordBotCode.Main.CustomEvents.CommandRegisterEvent;
-import DiscordBotCode.Main.CustomEvents.CommandRemoveEvent;
-import DiscordBotCode.Main.CustomEvents.InitEvents.InitCommandRegisterEvent;
-import DiscordBotCode.Main.CustomEvents.InitEvents.InitModuleRegisterEvent;
-import DiscordBotCode.Misc.Config.Data;
-import DiscordBotCode.Misc.Config.GsonDataManager;
 import DiscordBotCode.Misc.LoggerUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.RegexFileFilter;
-import org.apache.commons.lang.exception.ExceptionUtils;
 import org.reflections.Reflections;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
@@ -30,7 +21,6 @@ import sx.blah.discord.api.events.IListener;
 import sx.blah.discord.handle.impl.events.guild.GuildCreateEvent;
 import sx.blah.discord.handle.impl.events.shard.DisconnectedEvent;
 import sx.blah.discord.handle.impl.events.shard.ReconnectFailureEvent;
-import sx.blah.discord.handle.impl.events.shard.ReconnectSuccessEvent;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.modules.Configuration;
 import sx.blah.discord.util.BotInviteBuilder;
@@ -42,6 +32,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Set;
 import java.util.StringJoiner;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -61,7 +52,6 @@ public class DiscordBotBase
 	public static File tempFolder = null;
 	
 	public static boolean debug = false;
-	public static boolean extraFeedback = false;
 	public static boolean modules = false;
 	
 	public static String FilePath = "";
@@ -74,17 +64,20 @@ public class DiscordBotBase
 	
 	private static ArrayList<String> args = null;
 	
+	private static ArrayList<BotLauncher> launchers = new ArrayList<>();
+	
 	public static void main(String[] args)
 	{
-		DLLCleaner.clean();
 		TimeUtil.startTimeTaker("upTime");
+		TimeUtil.startTimeTaker("startup_time");
 		
-		debug = System.getProperty("debug") != null;
-		extraFeedback = System.getProperty("info") != null;
+		DLLCleaner.clean();
+		System.setProperty("java.awt.headless", "true");
+		
+		debug = System.getProperty("debugMode") != null;
 		modules = System.getProperty("modules") != null;
 		
 		System.out.println("debug: " + debug);
-		System.out.println("extraFeedback: " + extraFeedback);
 		System.out.println("modules: " + modules);
 		
 		try {
@@ -116,28 +109,6 @@ public class DiscordBotBase
 		System.out.println("File init done.");
 	}
 	
-	private static void initBot(){
-		if(!modules) Configuration.LOAD_EXTERNAL_MODULES = false;
-		
-		String token = FileUtil.getValue(INFO_FILE_TAG, "token");
-		
-		if(token == null){
-			System.err.println("Invalid bot token!");
-			System.exit(0);
-		}
-		
-		ClientBuilder builder = new ClientBuilder();
-		builder.withToken(token);
-		builder.withRecommendedShardCount();
-		
-		discordClient = builder.build();
-		discordClient.login();
-		
-		commandSign = FileUtil.getValue(INFO_FILE_TAG, "command_sign");
-		
-		waitForReady();
-		System.out.println("Bot init done.");
-	}
 
 	private static void initVersion() throws IOException
 	{
@@ -163,6 +134,31 @@ public class DiscordBotBase
 		System.out.println("Version init done.");
 	}
 	
+	private static void initBot(){
+		if(!modules) Configuration.LOAD_EXTERNAL_MODULES = false;
+		
+		String token = FileUtil.getValue(INFO_FILE_TAG, "token");
+		
+		if(token == null){
+			System.err.println("Invalid bot token!");
+			System.exit(0);
+		}
+		
+		ClientBuilder builder = new ClientBuilder();
+		builder.withToken(token);
+		builder.withRecommendedShardCount();
+		builder.withMinimumDispatchThreads(2);
+		
+		
+		discordClient = builder.build();
+		discordClient.login();
+		
+		commandSign = FileUtil.getValue(INFO_FILE_TAG, "command_sign");
+		
+		waitForReady();
+		System.out.println("Bot init done.");
+	}
+	
 	private static void initSubBot()
 	{
 		try {
@@ -175,7 +171,8 @@ public class DiscordBotBase
 			
 			for (Class<? extends BotLauncher> ob : classes) {
 				BotLauncher launcher = ob.newInstance();
-				launcher.run();
+				launchers.add(launcher);
+				new Thread(launcher::run).start();
 			}
 			
 			System.out.println("Sub bot init done.");
@@ -189,85 +186,90 @@ public class DiscordBotBase
 	}
 	
 	private void startup(){
-		CommandInputEvents.init();
 		clearTmpFolder();
 		
+		CommandUtils.formatters.add(new IgnoredMessageFormat());
+		CommandUtils.formatters.add(new MentionsMessageFormat());
+		CommandUtils.formatters.add(new CommandDataFormat());
+		
+		ServerSettings.init();
+		CommandInputEvents.init();
 		registerListeners();
 		
-		new Thread(() -> {
-			waitForReady();
-			
-			TimeUtil.startTimeTaker("start_time");
-			
-			discordClient.getDispatcher().registerListener(new CommandInputEvents.messageListener());
-			discordClient.getDispatcher().registerListener(new CommandInputEvents.messageEditedListener());
-			discordClient.getDispatcher().registerListener(new ReactionEvent());
-			
-			
-			StringJoiner joiner = new StringJoiner(", ");
-			DiscordBotBase.discordClient.getGuilds().forEach(( g ) -> joiner.add(g.getName()));
-			
-			System.out.println("Started \"" + DiscordBotBase.discordClient.getOurUser().getName() + "\" successfully!");
-			System.out.println("Version \"" + getVersion() + "\"");
-			System.out.println("Running on " + DiscordBotBase.discordClient.getShardCount() + " shard(s)");
-			System.out.println("Found " + DiscordBotBase.discordClient.getGuilds().size() + " server(s), {" + joiner.toString() + "}");
-			System.out.println("Command prefix is set to \'" + getCommandSign() + "\'");
-			
-			ServerSettings.init();
-		}).start();
-		
-		//Commands thread
-		new Thread(() -> {
-			waitForReady();
-			
-			CommandUtils.formatters.add(new IgnoredMessageFormat());
-			CommandUtils.formatters.add(new MentionsMessageFormat());
-			CommandUtils.formatters.add(new CommandDataFormat());
-			
-			discordClient.getDispatcher().dispatch(new InitModuleRegisterEvent());
-			discordClient.getDispatcher().dispatch(new InitCommandRegisterEvent());
-			
-		}).start();
+		System.out.println("Started \"" + DiscordBotBase.discordClient.getOurUser().getName() + "\" successfully!");
+		System.out.println("Version \"" + getVersion() + "\"");
+		System.out.println("Running on " + DiscordBotBase.discordClient.getShardCount() + " shard(s)");
+		System.out.println("Found " + DiscordBotBase.discordClient.getGuilds().size() + " server(s), {" + getGuilds() + "}");
+		System.out.println("Command prefix is set to \'" + getCommandSign() + "\'");
 		
 		Runtime.getRuntime().addShutdownHook(new Thread(DiscordBotBase::onBotClose));
-		
 		System.out.println("Startup init done.");
+		
+		System.out.println("Init default commands");
+		BaseCommandRegister.initDefaultCommands();
+		
+		initCommands();
+		initModules();
+		
+		System.out.println("System startup took: " + (System.currentTimeMillis() - TimeUtil.getStartTime("startup_time")) + "ms");
 	}
 	
-	private static GsonDataManager<Data> data;
-	
-	public static GsonDataManager<Data> data() {
-		if (data == null) {
-			try {
-				data = new GsonDataManager<>(Data.class, DiscordBotBase.FilePath + "/data.json", Data::new);
-			} catch (IOException e) {
-				System.err.println("Cannot read from config file?");
-				e.printStackTrace();
-			}
+	public static void initCommands(){
+		System.out.println("Start command register");
+		
+		int commands = CommandUtils.discordChatCommands.size();
+		
+		for(BotLauncher launcher : launchers){
+			launcher.registerCommands();
 		}
-		return data;
+		
+		System.out.println("End command register, commands registered = " + (CommandUtils.discordChatCommands.size() - commands));
+	}
+	
+	public static void initModules(){
+		System.out.println("Start module register");
+		
+		int modules = CommandUtils.discordModules.size();
+		
+		for(BotLauncher launcher : launchers){
+			launcher.registerModules();
+		}
+		
+		System.out.println("End module register, modules registered = " + (CommandUtils.discordModules.size() - modules));
+	}
+	
+	public static String getGuilds(){
+		StringJoiner joiner = new StringJoiner(", ");
+		DiscordBotBase.discordClient.getGuilds().forEach(( g ) -> joiner.add(g.getName()));
+		
+		return joiner.toString();
 	}
 	
 	public static void waitForReady(){
+		Long startup = 0L;
+		
 		while(discordClient == null || discordClient != null && !discordClient.isReady()){
+			startup++;
+			
 			try {
-				Thread.sleep(10);
+				Thread.sleep(1);
 			} catch (InterruptedException e) {
-				handleException(e);
+				DiscordBotBase.handleException(e);
 			}
 		}
+		
+		System.out.println("waitForReady: waited for " + startup + "ms");
 	}
 	
 	protected static void registerListeners()
 	{
+		discordClient.getDispatcher().registerListener(new CommandInputEvents.messageListener());
+		discordClient.getDispatcher().registerListener(new CommandInputEvents.messageEditedListener());
+		discordClient.getDispatcher().registerListener(new ReactionEvent());
+		
 		discordClient.getDispatcher().registerListener(new BaseCommandRegister());
 		
 		discordClient.getDispatcher().registerListener((IListener<DisconnectedEvent>) ( event ) -> LoggerUtil.log("Client disconnected for reason: " + event.getReason()));
-		discordClient.getDispatcher().registerListener((IListener<ReconnectSuccessEvent>) ( event ) -> {
-			TimeUtil.startTimeTaker("upTime"); //Reset uptime when reconnected
-			LoggerUtil.log("Client reconnected successfully");
-		});
-		
 		discordClient.getDispatcher().registerListener((IListener<ReconnectFailureEvent>) ( event ) -> LoggerUtil.log("Client reconnect attempt num " + event.getCurrentAttempt() + " failed!"));
 		discordClient.getDispatcher().registerListener((IListener<GuildCreateEvent>) ( event ) -> LoggerUtil.log("Bot has joined server \"" + event.getGuild().getName() + "\""));
 	}
@@ -276,18 +278,6 @@ public class DiscordBotBase
 	{
 		LoggerUtil.reportIssue(e);
 		LoggerUtil.exception(e);
-	}
-	
-	public static void handleExceptionSilently( Exception e )
-	{
-		LoggerUtil.exception(e);
-		DevAccess.msgDevs("```perl\nA exception has occurred!\n\n > Exception: " + ExceptionUtils.getStackTrace(e).replace("\n", "\n\t\t\t") + "\n```");
-	}
-	
-	public static void handleExceptionSilently( String e )
-	{
-		LoggerUtil.exception(new Exception(e));
-		DevAccess.msgDevs("```perl\nA exception has occurred!\n\n > Info: " + e + "\n```");
 	}
 	
 	private static void clearTmpFolder(){
@@ -300,6 +290,29 @@ public class DiscordBotBase
 		}
 		
 		DLLCleaner.clean();
+	}
+	
+	
+	private static Long lastReconnect;
+	
+	public static boolean canReconnect(){
+		if(lastReconnect == null) return true;
+		
+		Long t = System.currentTimeMillis() - lastReconnect;
+		
+		return t >= TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES);
+	}
+	
+	public static void reconnectBot(){
+		boolean t = canReconnect();
+		System.out.println("canReconnect() -> " + t);
+		
+		if(t) {
+			System.out.println("Bot reconnecting!");
+			discordClient.logout();
+			discordClient.login();
+			lastReconnect = System.currentTimeMillis();
+		}
 	}
 	
 	private static void onBotClose()
@@ -318,61 +331,6 @@ public class DiscordBotBase
 		discordClient = null;
 	}
 	
-	public static void addModule( DiscordModule module, String key )
-	{
-		CommandUtils.discordModules.put(key, module);
-		DiscordBotBase.discordClient.getModuleLoader().loadModule(module);
-	}
-	
-	public static void stopModule( String key )
-	{
-		CommandUtils.discordModules.get(key).disable();
-	}
-	
-	public static void resumeModule( String key )
-	{
-		CommandUtils.discordModules.get(key).enable(DiscordBotBase.discordClient);
-	}
-	
-	public static void removeModule( String key )
-	{
-		DiscordBotBase.discordClient.getModuleLoader().unloadModule(CommandUtils.discordModules.get(key));
-		CommandUtils.discordModules.remove(key);
-	}
-	
-	
-	public static void registerCommand( Class<? extends DiscordChatCommand> classObj, String key )
-	{
-		try{
-			DiscordChatCommand command = classObj.newInstance();
-			
-			if(command == null){
-				return;
-			}
-			
-			if (!CommandUtils.discordChatCommands.containsKey(key)) {
-				command.initPermissions();
-				CommandUtils.discordChatCommands.put(key, command);
-				DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandRegisterEvent(command, key));
-			} else {
-				System.err.println("Unable to register command with key: " + key + ", command already exists");
-			}
-			
-		}catch (Exception e){
-			DiscordBotBase.handleException(e);
-		}
-	}
-	
-	public static void unRegisterCommand( String key )
-	{
-		if (CommandUtils.discordChatCommands.containsKey(key)) {
-			DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandRemoveEvent(CommandUtils.discordChatCommands.get(key), key));
-			CommandUtils.discordChatCommands.remove(key);
-		} else {
-			System.err.println("Unable to remove no existing command with key: " + key);
-		}
-	}
-	
 	public static String getVersion(){
 		return version;
 	}
@@ -389,12 +347,7 @@ public class DiscordBotBase
 	public static void setPermissionList( EnumSet<Permissions> permissionList )
 	{
 		DiscordBotBase.permissionList = permissionList;
-		
-		new Thread(() -> {
-			DiscordBotBase.waitForReady();
-			
-			inviteBuilder = new BotInviteBuilder(discordClient).withPermissions(permissionList);
-			System.out.println("Invite link: " + DiscordBotBase.inviteBuilder.build());
-		}).start();
+		inviteBuilder = new BotInviteBuilder(discordClient).withPermissions(permissionList);
+		System.out.println("Invite link: " + DiscordBotBase.inviteBuilder.build());
 	}
 }

@@ -18,6 +18,5 @@ public abstract class DiscordChatCommand extends DiscordCommand
 			return ServerSettings.getValue(channel.getGuild(), "prefix");
 		}
 		return DiscordBotBase.getCommandSign();
-		
 	}
 }

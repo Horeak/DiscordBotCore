@@ -3,6 +3,12 @@ package DiscordBotCode.Main;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.CommandHandeling.MessageObject;
 import DiscordBotCode.Misc.Requests;
+import com.google.common.net.InternetDomainName;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang.WordUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.select.Elements;
 import sx.blah.discord.api.internal.json.objects.EmbedObject;
 import sx.blah.discord.handle.impl.obj.Embed;
 import sx.blah.discord.handle.impl.obj.Message;
@@ -10,6 +16,10 @@ import sx.blah.discord.handle.impl.obj.PrivateChannel;
 import sx.blah.discord.handle.obj.*;
 import sx.blah.discord.util.*;
 
+import java.awt.*;
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -144,7 +154,157 @@ public class ChatUtils
 		return message1[0];
 	}
 	
-	public static IMessage sendMessage( IMessage messageIn, MessageBuilder.Styles styles, boolean useTTS )
+	
+	public static IMessage sendMessageWithUrlHandel(IChannel chat, String message){
+		if(chat == null){
+			return null;
+		}
+		
+		if(chat.isPrivate() && ((PrivateChannel)chat).getRecipient() != null){
+			if(((PrivateChannel)chat).getRecipient().isBot()){
+				return null;
+			}
+		}
+		
+		MessageObject ob = CommandUtils.getCurrentHandledMessage();
+		EmbedObject object = null;
+		
+		if(ob != null){
+			if(ob.getPost_channel() != null){
+				chat = ob.getPost_channel();
+			}
+		}
+		
+		List<String> urls = Utils.extractUrls(message);
+		
+		for(String t : urls){
+			message = message.replace(t, "<" + t + ">");
+		}
+		
+		if(urls.size() > 0){
+			String tg = urls.get(0);
+			
+			EmbedBuilder builder = new EmbedBuilder();
+			URL ur = null;
+			
+			try {
+				ur = new URL(tg);
+			} catch (MalformedURLException e) {
+				DiscordBotBase.handleException(e);
+			}
+			
+			try {
+				String html = IOUtils.toString(ur.openStream(), "utf-8");
+				Document doc = Jsoup.parseBodyFragment(html);
+				
+				Elements titleEl = doc.select("meta[property=og:title]");
+				Elements descriptionEl = doc.select("meta[property=og:description]");
+				Elements imageEl = doc.select("meta[property=og:image]");
+				Elements color = doc.select("meta[name=theme-color]");
+				Elements siteName = doc.select("meta[name=og:site_name]");
+				
+				Elements element = doc.select("link[href~=.*\\.(ico|png)]");
+				
+				InternetDomainName domain = InternetDomainName.from(ur.getHost()).topPrivateDomain();
+				
+				if(siteName.size() > 0 || domain != null){
+					builder.withFooterText(siteName.size() <= 0 ? WordUtils.capitalize(domain.toString()) : siteName.attr("content"));
+					
+					if(element.size() > 0){
+						String t = element.attr("href");
+						
+						if(t != null) {
+							builder.withFooterIcon(t);
+						}
+					}
+				}
+				
+				if(titleEl.size() > 0){
+					String title = titleEl.attr("content");
+					
+					if(title.length() > EmbedBuilder.AUTHOR_NAME_LIMIT){
+						title = title.substring(0, (EmbedBuilder.AUTHOR_NAME_LIMIT - 4)) + "...";
+					}
+					
+					builder.withAuthorName(title);
+					builder.withAuthorUrl(tg);
+				}
+				
+				if(descriptionEl.size() > 0){
+					String description = descriptionEl.attr("content").replace("\n", "").replace("  ", "");
+					
+					description += "...";
+					
+					if(description.length() > EmbedBuilder.DESCRIPTION_CONTENT_LIMIT){
+						description = description.substring(0, (EmbedBuilder.DESCRIPTION_CONTENT_LIMIT - 4)) + "...";
+					}
+					
+					builder.withDescription(description);
+				}
+				
+				if(color.size() > 0){
+					String c1 = color.attr("content");
+					Color c = Color.decode(c1);
+					
+					if(c != null){
+						builder.withColor(c);
+					}
+				}
+				
+				if(imageEl.size() > 0){
+					boolean small = true;
+					
+					Elements imageWidth = doc.select("meta[property=og:image:width]");
+					Elements imageHeight = doc.select("meta[property=og:image:height]");
+					
+					if(imageWidth.size() > 0 && imageHeight.size() > 0){
+						int w = Integer.parseInt(imageWidth.attr("content"));
+						int h = Integer.parseInt(imageHeight.attr("content"));
+						
+						if(w > 800 || h > 800){
+							small = false;
+						}
+					}
+					
+					String image = imageEl.attr("content");
+					
+					if(small){
+						builder.withThumbnail(image);
+					}else{
+						builder.withImage(image);
+					}
+				}
+				
+				object = builder.build();
+				
+			} catch (IOException e) {
+				DiscordBotBase.handleException(e);
+			}
+		}
+		
+		
+		final IMessage[] message1 = { null };
+		MessageBuilder builder = new MessageBuilder(DiscordBotBase.discordClient);
+		builder.withChannel(chat);
+		
+		builder.withContent(message);
+		if(object != null) builder.withEmbed(object);
+		
+		RequestBuffer.request(() -> {
+			if (builder.getContent() != null && !builder.getContent().isEmpty() && builder.getChannel() != null) {
+				message1[ 0 ] = builder.build();
+			}
+		});
+		
+		return message1[0];
+	}
+	
+	public static IMessage sendMessage( IMessage messageIn, MessageBuilder.Styles styles, boolean useTTS){
+		return sendMessage(messageIn, styles, useTTS, null);
+	}
+	
+	
+	public static IMessage sendMessage( IMessage messageIn, MessageBuilder.Styles styles, boolean useTTS, EmbedObject object )
 	{
 		MessageBuilder builder = new MessageBuilder(DiscordBotBase.discordClient);
 		
@@ -155,6 +315,10 @@ public class ChatUtils
 		}
 		
 		builder.appendContent(messageIn.getContent());
+		
+		if(object != null){
+			builder.withEmbed(object);
+		}
 		
 		if(useTTS)builder.withTTS();
 		
@@ -209,16 +373,6 @@ public class ChatUtils
 	public static  IMessage sendMessage( IChannel chat, String message )
 	{
 		return sendMessage(chat, message, (MessageBuilder.Styles) null);
-	}
-	
-	public static void incomingMessageHandle( IMessage message )
-	{
-		CommandUtils.executeCommand(message);
-	}
-	
-	public static void incomingPrivateMessageHandle( IMessage message )
-	{
-		CommandUtils.executeCommand(message);
 	}
 	
 	public static IVoiceChannel getConnectedBotChannel( IGuild guild )

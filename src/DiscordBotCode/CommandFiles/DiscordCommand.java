@@ -51,7 +51,6 @@ public abstract class DiscordCommand
 		return false;
 	}
 	
-	
 	public boolean hasPermissions( IMessage message, String[] args )
 	{
 		if(this instanceof DiscordSubCommand){

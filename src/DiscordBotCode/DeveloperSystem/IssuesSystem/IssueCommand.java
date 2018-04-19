@@ -4,9 +4,12 @@ import DiscordBotCode.CommandFiles.DiscordChatCommand;
 import DiscordBotCode.CommandFiles.DiscordSubCommand;
 import DiscordBotCode.DeveloperSystem.DevAccess;
 import DiscordBotCode.Main.ChatUtils;
+import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.Utils;
+import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -20,6 +23,9 @@ public class IssueCommand extends DiscordChatCommand
 		subCommands.add(new delete(this));
 		subCommands.add(new open(this));
 		subCommands.add(new mute(this));
+		
+		subCommands.add(new addIssueChannel(this));
+		subCommands.add(new removeIssueChannel(this));
 		
 		IssueHandler.init();
 	}
@@ -42,7 +48,7 @@ public class IssueCommand extends DiscordChatCommand
 	public void commandExecuted( IMessage message, String[] args )
 	{
 		CopyOnWriteArrayList<IssueObject> issues = new CopyOnWriteArrayList<>();
-		issues.addAll(IssueHandler.issueObjects);
+		issues.addAll(IssueHandler.getIssues());
 		
 		//Sorting
 		/*
@@ -244,7 +250,7 @@ class close extends DiscordSubCommand{
 		
 		for(String t : args){
 			if(t.equalsIgnoreCase("all")){
-				objects.addAll(IssueHandler.issueObjects);
+				objects.addAll(IssueHandler.getIssues()); //TODO This crashes/hangs the bot
 				break;
 			}
 			
@@ -303,7 +309,7 @@ class wip extends DiscordSubCommand{
 		
 		for(String t : args){
 			if(t.equalsIgnoreCase("all")){
-				objects.addAll(IssueHandler.issueObjects);
+				objects.addAll(IssueHandler.getIssues());
 				break;
 			}
 			
@@ -360,14 +366,14 @@ class delete extends DiscordSubCommand{
 	{
 		for(String t : args){
 			if(t.equalsIgnoreCase("all")){
-				for(IssueObject ob : IssueHandler.issueObjects){
-					if(IssueHandler.issueObjects.size() <= 3) DevAccess.msgDevs("```perl\nIssue: " + ob + "\n> Has been deleted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+				for(IssueObject ob : IssueHandler.getIssues()){
+					if(IssueHandler.getIssues().size() <= 3) DevAccess.msgDevs("```perl\nIssue: " + ob + "\n> Has been deleted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 					IssueHandler.removeIssue(ob);
 					IssueHandler.removeIssueById(ob.id);
 				}
 				
-				if(IssueHandler.issueObjects.size() > 3){
-					DevAccess.msgDevs("```perl\n" + IssueHandler.issueObjects.size() + " Issues as been marked deleted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
+				if(IssueHandler.getIssues().size() > 3){
+					DevAccess.msgDevs("```perl\n" + IssueHandler.getIssues().size() + " Issues as been marked deleted by: \"" + (message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()) + "\"\n```", message.getAuthor());
 				}
 				break;
 			}
@@ -413,7 +419,7 @@ class open extends DiscordSubCommand{
 		
 		for(String t : args){
 			if(t.equalsIgnoreCase("all")){
-				objects.addAll(IssueHandler.issueObjects);
+				objects.addAll(IssueHandler.getIssues());
 				break;
 			}
 			
@@ -472,7 +478,7 @@ class mute extends DiscordSubCommand{
 		
 		for(String t : args){
 			if(t.equalsIgnoreCase("all")){
-				objects.addAll(IssueHandler.issueObjects);
+				objects.addAll(IssueHandler.getIssues());
 				break;
 			}
 			
@@ -513,3 +519,72 @@ class mute extends DiscordSubCommand{
 	}
 }
 
+class addIssueChannel extends DiscordSubCommand
+{
+	public addIssueChannel( DiscordChatCommand baseCommand ) {
+		super(baseCommand);
+	}
+	
+	@Override
+	public String commandPrefix() {
+		return "addIssueChannel";
+	}
+	
+	@Override
+	public void commandExecuted( IMessage message, String[] args ) {
+		ArrayList<IChannel> channels = new ArrayList<>();
+		channels.addAll(message.getChannelMentions());
+		
+		for(IChannel channel : channels){
+			IssueHandler.data().get().postChannels.add(channel.getLongID());
+		}
+		
+		try {
+			IssueHandler.data().save();
+		} catch (IOException e) {
+			DiscordBotBase.handleException(e);
+		}
+		
+		ChatUtils.sendMessage(message.getChannel(), channels.size() + " channel(s) have been added as issue channel(s)");
+	}
+	
+	@Override
+	public boolean canExecute( IMessage message, String[] args ) {
+		return true;
+	}
+}
+
+class removeIssueChannel extends DiscordSubCommand
+{
+	public removeIssueChannel( DiscordChatCommand baseCommand ) {
+		super(baseCommand);
+	}
+	
+	@Override
+	public String commandPrefix() {
+		return "removeIssueChannel";
+	}
+	
+	@Override
+	public void commandExecuted( IMessage message, String[] args ) {
+		ArrayList<IChannel> channels = new ArrayList<>();
+		channels.addAll(message.getChannelMentions());
+		
+		for(IChannel channel : channels){
+			IssueHandler.data().get().postChannels.remove(channel.getLongID());
+		}
+		
+		try {
+			IssueHandler.data().save();
+		} catch (IOException e) {
+			DiscordBotBase.handleException(e);
+		}
+		
+		ChatUtils.sendMessage(message.getChannel(), channels.size() + " channel(s) have been removed as issue channel(s)");
+	}
+	
+	@Override
+	public boolean canExecute( IMessage message, String[] args ) {
+		return true;
+	}
+}

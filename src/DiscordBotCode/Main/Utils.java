@@ -1,5 +1,7 @@
 package DiscordBotCode.Main;
 
+import DiscordBotCode.Misc.Config.Data;
+import DiscordBotCode.Misc.Config.GsonDataManager;
 import org.apache.commons.lang3.StringUtils;
 import sx.blah.discord.handle.obj.IMessage;
 
@@ -13,6 +15,7 @@ import java.util.regex.Pattern;
 public class Utils
 {
 	public static Random rand = new Random();
+	private static GsonDataManager<Data> data;
 	
 	public static long getPing( IMessage message){
 		Long t = System.currentTimeMillis() - message.getCreationDate().toEpochMilli();
@@ -22,6 +25,24 @@ public class Utils
 			t *= -1;
 		}
 		return t;
+	}
+	
+	public static List<String> extractUrls(String text)
+	{
+		List<String> containedUrls = new ArrayList<String>();
+		String urlRegex = "((https?|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
+		Pattern pattern = Pattern.compile(urlRegex, Pattern.CASE_INSENSITIVE);
+		Matcher urlMatcher = pattern.matcher(text);
+		
+		int t = 0;
+		
+		while (urlMatcher.find() && t < 10)
+		{
+			containedUrls.add(text.substring(urlMatcher.start(0), urlMatcher.end(0)));
+			t++;
+		}
+		
+		return containedUrls;
 	}
 	
 	public static boolean isInteger( String s )
@@ -154,5 +175,31 @@ public class Utils
 		}
 		
 		return list;
+	}
+	
+	public static GsonDataManager<Data> data() {
+		if (data == null) {
+			try {
+				data = new GsonDataManager<>(Data.class, DiscordBotBase.FilePath + "/data.json", Data::new);
+			} catch (IOException e) {
+				System.err.println("Cannot read from config file?");
+				e.printStackTrace();
+			}
+		}
+		return data;
+	}
+	
+	public static Object getData(String key){
+		return data().get().data.get(key);
+	}
+	
+	public static void setData(String key, Object value){
+		data().get().data.put(key, value);
+		
+		try {
+			data().save();
+		} catch (IOException e) {
+			DiscordBotBase.handleException(e);
+		}
 	}
 }

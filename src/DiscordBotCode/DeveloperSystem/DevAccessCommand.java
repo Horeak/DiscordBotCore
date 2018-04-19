@@ -3,9 +3,11 @@ package DiscordBotCode.DeveloperSystem;
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
 import DiscordBotCode.CommandFiles.DiscordSubCommand;
 import DiscordBotCode.Main.ChatUtils;
+import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.Utils;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
+import sx.blah.discord.util.RequestBuffer;
 
 import java.util.ArrayList;
 
@@ -15,8 +17,6 @@ public class DevAccessCommand extends DevCommandBase
 	{
 		subCommands.add(new grant(this));
 		subCommands.add(new revoke(this));
-		
-		DevAccess.init();
 	}
 	
 	@Override
@@ -56,7 +56,7 @@ class grant extends DiscordSubCommand{
 		ArrayList<Long> ids = new ArrayList<>();
 		
 		for(String t : args){
-			if(Utils.isInteger(t)){
+			if(Utils.isLong(t)){
 				ids.add(Long.parseLong(t));
 			}
 		}
@@ -66,12 +66,18 @@ class grant extends DiscordSubCommand{
 		}
 		
 		for(Long t : ids){
-			DevAccess.addDev(t);
+			RequestBuffer.request(() -> {
+				IUser user = DiscordBotBase.discordClient.fetchUser(t);
+				
+				if(user != null){
+					DevAccess.addDev(t);
+					ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " \"" + user.getName() + "#" + user.getDiscriminator() +"\" has been granted dev status!");
+				}
+			});
+			
 		}
 		
-		if(ids.size() > 0) {
-			ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " " + ids.size() + " users were granted dev status!");
-		}else{
+		if (ids.size() <= 0) {
 			ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " Found no users!");
 		}
 	}

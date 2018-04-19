@@ -9,11 +9,13 @@ public class CommandFailedExecuteEvent extends Event
 {
 	private DiscordCommand command;
 	private IMessage message;
+	private Thread thread;
 	
-	public CommandFailedExecuteEvent( DiscordCommand command, IMessage message )
+	public CommandFailedExecuteEvent( DiscordCommand command, IMessage message, Thread thread )
 	{
 		this.command = command;
 		this.message = message;
+		this.thread = thread;
 	}
 	
 	public DiscordCommand getCommand()
@@ -24,5 +26,10 @@ public class CommandFailedExecuteEvent extends Event
 	public IMessage getMessage()
 	{
 		return message;
+	}
+	
+	public Thread getThread()
+	{
+		return thread;
 	}
 }

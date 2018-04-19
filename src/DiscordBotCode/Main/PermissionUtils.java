@@ -37,9 +37,9 @@ public class PermissionUtils
 		ArrayList<IRole> list = new ArrayList<>();
 		list.addAll(roles);
 		
-		if(DiscordBotBase.data().get().getIgnoredRoles().containsKey(guild.getLongID())) {
+		if(Utils.data().get().getIgnoredRoles().containsKey(guild.getLongID())) {
 			list.removeIf(( role ) -> {
-				for (String t : DiscordBotBase.data().get().getGuildIgnoredRoles(guild)){
+				for (String t : Utils.data().get().getGuildIgnoredRoles(guild)){
 					if(role.getName().matches(t)){
 						return true;
 					}

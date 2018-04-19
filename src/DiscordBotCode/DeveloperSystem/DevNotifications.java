@@ -15,15 +15,21 @@ public class DevNotifications extends DevCommandBase
 	public void commandExecuted( IMessage message, String[] args )
 	{
 		if(DevAccess.isDev(message.getAuthor())){
-			boolean t = false;
+			DevUserObject t = null;
 			
-			if(DevAccess.devNotifications.containsKey(message.getAuthor().getLongID()) && DevAccess.devNotifications.size() > 0){
-				t = DevAccess.devNotifications.get(message.getAuthor().getLongID());
+			if(DevAccess.getDevData(message.getAuthor()) != null){
+				t = DevAccess.getDevData(message.getAuthor());
 			}
 			
-			DevAccess.devNotifications.put(message.getAuthor().getLongID(), !t);
+			
+			if(t != null) {
+				t.notifications = !t.notifications;
+				DevAccess.updateDevData(message.getAuthor(), t);
+			}
+		}else{
+			return;
 		}
 		
-		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " You have now " + (DevAccess.devNotifications.get(message.getAuthor().getLongID()) ? "enabled" : "disabled") + " dev notifications!");
+		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " You have now " + (DevAccess.getDevData(message.getAuthor()) != null ? (DevAccess.getDevData(message.getAuthor()).notifications ? "enabled" : "disabled") : "Null!") + " DevData notifications!");
 	}
 }

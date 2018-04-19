@@ -23,26 +23,22 @@ public class ServerSettings {
 				if(Utils.isLong(fe.getName())){
 					Long id = Long.parseLong(fe.getName());
 					
-					IGuild guild = DiscordBotBase.discordClient.getGuildByID(id);
-					
-					if(guild != null){
-						try {
-							Files.lines(fe.toPath()).forEach(( e ) -> {
-								if(!e.contains("=")) return;
-								
-								String[] tt = e.split("=");
-								
-								if(tt.length == 2){
-									if(!values.containsKey(guild.getLongID())){
-										values.put(guild.getLongID(), new HashMap<>());
-									}
-									
-									values.get(guild.getLongID()).put(tt[0], tt[1]);
+					try {
+						Files.lines(fe.toPath()).forEach(( e ) -> {
+							if(!e.contains("=")) return;
+							
+							String[] tt = e.split("=");
+							
+							if(tt.length == 2){
+								if(!values.containsKey(id)){
+									values.put(id, new HashMap<>());
 								}
-							});
-						} catch (IOException e) {
-							DiscordBotBase.handleException(e);
-						}
+								
+								values.get(id).put(tt[0], tt[1]);
+							}
+						});
+					} catch (IOException e) {
+						DiscordBotBase.handleException(e);
 					}
 				}
 			}

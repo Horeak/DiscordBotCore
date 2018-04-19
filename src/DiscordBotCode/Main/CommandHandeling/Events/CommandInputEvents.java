@@ -1,11 +1,13 @@
 package DiscordBotCode.Main.CommandHandeling.Events;
 
+import DiscordBotCode.CommandFiles.DiscordChatCommand;
 import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.CommandFiles.DiscordSubCommand;
 import DiscordBotCode.DeveloperSystem.DevAccess;
-import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.CommandHandeling.MessageObject;
+import DiscordBotCode.Main.CustomEvents.CommandExecutedEvent;
+import DiscordBotCode.Main.CustomEvents.CommandFailedExecuteEvent;
 import DiscordBotCode.Main.DiscordBotBase;
 import sx.blah.discord.api.events.IListener;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
@@ -13,9 +15,7 @@ import sx.blah.discord.handle.impl.events.guild.channel.message.MessageUpdateEve
 import sx.blah.discord.handle.obj.IMessage;
 
 import java.util.ArrayList;
-import java.util.Random;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.*;
 
 public class CommandInputEvents
 {
@@ -24,9 +24,9 @@ public class CommandInputEvents
 	
 	public static final int threads_amount = 4;
 	
-	public final static Object obj = new Object();
+	private static ScheduledExecutorService timer = Executors.newScheduledThreadPool(0);
 	
-	public static CopyOnWriteArrayList<handleThreads> threadss = new CopyOnWriteArrayList<>();
+	public static CopyOnWriteArrayList<CommandHandlingThread> threadss = new CopyOnWriteArrayList<>();
 	
 	public static class messageListener implements IListener<MessageReceivedEvent>
 	{
@@ -39,46 +39,102 @@ public class CommandInputEvents
 	
 	public static class messageEditedListener implements IListener<MessageUpdateEvent>{
 		@Override
-		public void handle( MessageUpdateEvent event )
-		{
-			CommandInputEvents.threadHandle(event.getNewMessage());
+		public void handle( MessageUpdateEvent event ) {
+			if(event.getNewMessage() == null && event.getOldMessage() == null){
+				System.out.println("Message edit null!");
+				return;
+			}
+			
+			//Return if message is the same
+			if(event.getOldMessage() != null && event.getNewMessage() != null){
+				if(event.getOldMessage().getContent() != null && event.getNewMessage().getContent() != null){
+					if(event.getOldMessage().getContent().equals(event.getNewMessage().getContent())){
+						return;
+					}
+				}
+			}
+			if(event.getNewMessage() == null && event.getOldMessage() != null){
+				CommandInputEvents.threadHandle(event.getOldMessage());
+				
+			}else{
+				
+				CommandInputEvents.threadHandle(event.getNewMessage());
+			}
 		}
 	}
 	
-	private static Random rand = new Random();
+	private static int lastSelection = 0;
 	public static void threadHandle(IMessage message){
-		ArrayList<handleThreads> thWork = new ArrayList<>();
+		ArrayList<CommandHandlingThread> thWork = new ArrayList<>();
 		
 		threadss.removeIf((th) -> !th.isAlive());
 		
-		for(handleThreads th : CommandInputEvents.threadss){
+		if(threadss.size() <= 0){
+			System.err.println("No available threads for command handling! Handling message directly");
+			handle(new MessageObject(message));
+			return;
+		}
+		
+		for(CommandHandlingThread th : CommandInputEvents.threadss){
 			if(!th.working && !th.isInterrupted() && th.isAlive()){
 				thWork.add(th);
 			}
 		}
 		
+		if(thWork.size() > 0) {
+			if (lastSelection >= thWork.size()) {
+				lastSelection = 0;
+			}
+		}else{
+			if(lastSelection >= threadss.size()){
+				lastSelection = 0;
+			}
+		}
+		
 		if(thWork.size() > 0){
-			handleThreads th = thWork.get(rand.nextInt(thWork.size()));
+			CommandHandlingThread th = thWork.get(lastSelection);
 			th.messages.add(new MessageObject(message));
-			th.latch.countDown();
-		}else {
-			handleThreads th = threadss.get(rand.nextInt(threadss.size()));
+			th.getLatch().countDown();
+			lastSelection++;
+			
+		}else{
+			
+			CommandHandlingThread th = threadss.get(lastSelection);
 			th.messages.add(new MessageObject(message));
-			th.latch.countDown();
+			th.getLatch().countDown();
+			lastSelection++;
 		}
 	}
 	
 	public static void init(){
 		for(int i = 0; i < threads_amount; i++){
-			handleThreads thread = new handleThreads(i + 1);
+			CommandHandlingThread thread = new CommandHandlingThread(i + 1);
 			thread.start();
 			threadss.add(thread);
 		}
+		
+		DiscordBotBase.discordClient.getDispatcher().registerListener((IListener<CommandExecutedEvent>) ( event ) -> {
+			if(event.getThread() instanceof CommandHandlingThread){
+				if(((CommandHandlingThread)event.getThread()).run != null) {
+					((CommandHandlingThread) event.getThread()).run.cancel(true);
+				}
+			}
+		});
+		
+		
+		DiscordBotBase.discordClient.getDispatcher().registerListener((IListener<CommandFailedExecuteEvent>) ( event ) -> {
+			if(event.getThread() instanceof CommandHandlingThread){
+				if(((CommandHandlingThread)event.getThread()).run != null) {
+					((CommandHandlingThread) event.getThread()).run.cancel(true);
+				}
+			}
+		});
 	}
 	
-	public static class handleThreads extends Thread{
+	
+	public static class CommandHandlingThread extends Thread{
 		
-		public handleThreads(int num)
+		public CommandHandlingThread( int num)
 		{
 			this.setName("[Message handling thread][Num:" + num + "]");
 		}
@@ -87,8 +143,17 @@ public class CommandInputEvents
 		public MessageObject curMessage;
 		public boolean working = false;
 		
-		protected CountDownLatch latch = new CountDownLatch(1);
+		public ScheduledFuture run;
 		
+		private CountDownLatch latch = new CountDownLatch(1);
+		
+		public CountDownLatch getLatch(){
+			if(latch == null){
+				latch = new CountDownLatch(1);
+			}
+			
+			return latch;
+		}
 		
 		@Override
 		public void run()
@@ -111,9 +176,17 @@ public class CommandInputEvents
 						curMessage = message;
 						working = true;
 						
-						handle(message);
+						messages.remove(message);//Remove message before handeling so even if there is a issue it doesnt reuse message
 						
-						messages.remove(message);
+						//TODO May be dangerous to have too low timeout for reconnecting the bot
+						run = timer.schedule(CommandInputEvents::errorCommand, 30, TimeUnit.SECONDS);
+						
+						try {
+							handle(message);
+						}catch (Exception e){
+							DiscordBotBase.handleException(e);
+						}
+						
 						curMessage = null;
 						working = false;
 					}
@@ -122,6 +195,11 @@ public class CommandInputEvents
 				}
 			}
 		}
+	}
+	
+	public static void errorCommand(){
+		System.err.println("Command was not executed!");
+		DiscordBotBase.reconnectBot();
 	}
 	
 	public static void handle( MessageObject message){
@@ -136,23 +214,28 @@ public class CommandInputEvents
 		
 		if(command != null) commandName += command.getClass().getSimpleName();
 		
-		if (!message.getChannel().isPrivate()) {
-			if (command != null) {//Only log the message if it was an command
+		if (command != null) {//Only log the message if it was an command
+			if (!message.getChannel().isPrivate()) {
 				StringBuilder builder = new StringBuilder();
 				
 				if(DISPLAY_CHANNEL) builder.append("[").append(message.getGuild().getName()).append("/").append(message.getChannel().getName()).append("]");
 				if(DISPLAY_NAME) builder.append("[").append(message.getAuthor().getDisplayName(message.getGuild())).append("]");
 				if(DiscordBotBase.debug && !commandName.isEmpty()) builder.append("[").append(commandName).append("]");
-				builder.append("Command received: ").append(message.getContent());
+				builder.append("Command received: ").append(message.getContent().replace("\n", " $\\n "));
+				
+				System.out.println(builder.toString());
+			}else{
+				StringBuilder builder = new StringBuilder();
+				String prefix = command instanceof DiscordChatCommand ? ((DiscordChatCommand)command).getCommandSign(message.getChannel()) : DiscordBotBase.getCommandSign();
+				String commandN = command instanceof DiscordSubCommand ? ((DiscordSubCommand)command).baseCommand.commandPrefix() + " " + command.commandPrefix() : command.commandPrefix();
+				
+				if(DISPLAY_CHANNEL) builder.append("[").append(message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()).append("]");
+				builder.append("Command received in private: ").append(prefix + commandN);
 				
 				System.out.println(builder.toString());
 			}
 		}
 		
-		if (message.getChannel().isPrivate()) {
-			ChatUtils.incomingPrivateMessageHandle(message);
-		} else {
-			ChatUtils.incomingMessageHandle(message);
-		}
+		CommandUtils.executeCommand(message);
 	}
 }

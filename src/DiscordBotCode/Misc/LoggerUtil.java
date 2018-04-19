@@ -1,11 +1,7 @@
 package DiscordBotCode.Misc;
 
-import DiscordBotCode.DeveloperSystem.IssuesSystem.IssueBuilder;
-import DiscordBotCode.DeveloperSystem.IssuesSystem.IssueHandler;
-import DiscordBotCode.DeveloperSystem.IssuesSystem.IssueObject;
 import DiscordBotCode.Extra.FileGetter;
 import DiscordBotCode.Extra.FileUtil;
-import DiscordBotCode.Main.CustomEvents.LogEvent;
 import DiscordBotCode.Main.DiscordBotBase;
 import sx.blah.discord.util.DiscordException;
 
@@ -14,20 +10,18 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
 import java.util.Date;
 import java.util.logging.*;
 
 public class LoggerUtil
 {
 	static final DateFormat df = new SimpleDateFormat("dd/LLL/yyyy-HH:mm(zzz)");
-	static final Calendar calendar = Calendar.getInstance();
 	public static Logger out;
 	public static boolean ERROR_LOGS = true;
 	
 	public static void activate()
 	{
-		out = Logger.getLogger("Logger");
+		out = Logger.getLogger("DiscordBot_Logger");
 		out.setUseParentHandlers(false);
 		out.setLevel(Level.ALL);
 		
@@ -99,13 +93,14 @@ public class LoggerUtil
 			return;
 		}
 		
-		IssueObject object = new IssueBuilder().genId().withException(e).withCurrentDate().build();
+//		IssueObject object = new IssueBuilder().genId().withException(e).withCurrentDate().build();
 		
-		if(!IssueHandler.issueExists(object)){
-			IssueHandler.createIssue(object);
-		}else{
-			IssueHandler.addIssue(object);
-		}
+		//TODO Renable when remade
+//		if(!IssueHandler.issueExists(object)){
+//			IssueHandler.createIssue(object);
+//		}else{
+//			IssueHandler.addIssue(object);
+//		}
 	}
 }
 
@@ -181,10 +176,6 @@ class CustomConsoleHandler extends ConsoleHandler
 				System.err.write(message.getBytes());
 			} else {
 				System.out.write(message.getBytes());
-			}
-			
-			if(DiscordBotBase.discordClient != null && DiscordBotBase.discordClient.isReady()) {
-				DiscordBotBase.discordClient.getDispatcher().dispatch(new LogEvent(message));
 			}
 			
 		} catch (Exception exception) {

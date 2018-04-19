@@ -1,6 +1,7 @@
 package DiscordBotCode.Main;
 
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
+import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.modules.IModule;
 
@@ -23,7 +24,7 @@ public class DiscordModule implements IModule
 	{
 		System.out.println("Enabling module \"" + name + "\" version [" + version + "]");
 		for (Class command : commands) {
-			DiscordBotBase.registerCommand(command, command.getName());
+			CommandUtils.registerCommand(command, command.getName());
 		}
 		
 		return true;
@@ -34,7 +35,7 @@ public class DiscordModule implements IModule
 	{
 		System.out.println("Disabling module \"" + name + "\"");
 		for (Class command : commands) {
-			DiscordBotBase.unRegisterCommand(command.getName() + "_key");
+			CommandUtils.unRegisterCommand(command.getName() + "_key");
 		}
 	}
 	

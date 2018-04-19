@@ -8,6 +8,8 @@ import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.Events.CommandInputEvents;
 import DiscordBotCode.Main.CustomEvents.CommandExecutedEvent;
 import DiscordBotCode.Main.CustomEvents.CommandFailedExecuteEvent;
+import DiscordBotCode.Main.CustomEvents.CommandRegisterEvent;
+import DiscordBotCode.Main.CustomEvents.CommandRemoveEvent;
 import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.DiscordModule;
 import DiscordBotCode.Main.PermissionUtils;
@@ -26,22 +28,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 public class CommandUtils
 {
-	public static int commandsExecuted = 0;
-	
 	public static ConcurrentHashMap<String, DiscordChatCommand> discordChatCommands = new ConcurrentHashMap<>(); //All commands added to the program
 	public static ConcurrentHashMap<String, DiscordModule> discordModules = new ConcurrentHashMap<>();
 	
 	public static CopyOnWriteArrayList<ICommandFormatter> formatters = new CopyOnWriteArrayList<>();
 	
-	public static void executeCommand( IMessage m )
-	{
-		executeCommand(m, false);
-	}
-	
-	/**
-	 * @param internal Disables built in permissions system to allow commands to be excec<uted by the bot itself or from self constructed messages
-	 */
-	public static void executeCommand( IMessage m1T, boolean internal )
+	public static void executeCommand( IMessage m1T )
 	{
 		IMessage m1 = formatMessage(m1T);
 		String text = m1.getContent();
@@ -50,10 +42,10 @@ public class CommandUtils
 		
 		if (command != null) {
 			String[] args = getArgsFromText(text, command, m1.getChannel());
-			boolean permission = command.hasPermissions(m1, args) || internal;
+			boolean permission = command.hasPermissions(m1, args);
 			
 			if (!command.canCommandBePrivateChat() && m1.getChannel().isPrivate()) {
-				ChatUtils.sendMessage(m1.getChannel(), "*That command is not available for private chats!*");
+				ChatUtils.sendMessage(m1.getChannel(), "*This command is not available for private channels!*");
 				return;
 			}
 			
@@ -65,40 +57,30 @@ public class CommandUtils
 			
 			if (permission) {
 				if (command.canExecute(m1, args)) {//Execute the command and send it to the botBase
-					try {
-						command.commandExecuted(m1, args);
-						commandsExecuted += 1;
-					} catch (Exception e) {
-						DiscordBotBase.handleException(e);
-					}
-					
-					DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandExecutedEvent(command, m1));
+					command.commandExecuted(m1, args);
+					DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandExecutedEvent(command, m1, Thread.currentThread()));
 					
 					return; //End code on successful command execution
 				} else {
-					 if (DiscordBotBase.extraFeedback) {
-						ChatUtils.sendMessage(m1.getChannel(), command.unableToExecuteCommand(m1));
-					}
+					ChatUtils.sendMessage(m1.getChannel(), command.unableToExecuteCommand(m1));
 				}
 			}else{
-				if(DiscordBotBase.extraFeedback) {
-					if(command.getRequiredRole(m1.getChannel()) != null){
-						if(!PermissionUtils.hasRole(m1.getAuthor(), m1.getGuild(), command.getRequiredRole(m1.getChannel()), true)){
-							ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You must be ` " + command.getRequiredRole(m1.getChannel()).getName() + " ` or above to use this command!");
-						}
-					}else {
-						ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You do not have the required permissions to use this command!");
+				if(command.getRequiredRole(m1.getChannel()) != null){
+					if(!PermissionUtils.hasRole(m1.getAuthor(), m1.getGuild(), command.getRequiredRole(m1.getChannel()), true)){
+						ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You must be ` " + command.getRequiredRole(m1.getChannel()).getName() + " ` or above to use this command!");
 					}
+				}else {
+					ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You do not have the required permissions to use this command!");
 				}
 			}
 		}
 		
-		DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandFailedExecuteEvent(command, m1));//Command failed from unknown error. Sending it to botBase
+		DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandFailedExecuteEvent(command, m1, Thread.currentThread()));//Command failed from unknown error. Sending it to botBase
 	}
 	
 	public static MessageObject getCurrentHandledMessage(){
-		if(Thread.currentThread() instanceof CommandInputEvents.handleThreads){
-			MessageObject ob = ((CommandInputEvents.handleThreads)Thread.currentThread()).curMessage;
+		if(Thread.currentThread() instanceof CommandInputEvents.CommandHandlingThread){
+			MessageObject ob = ((CommandInputEvents.CommandHandlingThread)Thread.currentThread()).curMessage;
 			
 			if(ob != null){
 				return ob;
@@ -127,7 +109,7 @@ public class CommandUtils
 			Field fiel = Message.class.getDeclaredField(key);
 			
 			if(fiel != null){
-				if(Modifier.isProtected(fiel.getModifiers())) { //All fields that are changeable are protected, therefor private fields can be used to unchangeable values
+				if(Modifier.isProtected(fiel.getModifiers())) { //All fields that are changeable are protected, therefor private fields can be used to have unchangeable values
 					fiel.setAccessible(true);
 					messageFields.put(key, fiel);
 					return true;
@@ -360,5 +342,59 @@ public class CommandUtils
 		}
 		
 		return null;
+	}
+	
+	public static void addModule( DiscordModule module, String key )
+	{
+		discordModules.put(key, module);
+		DiscordBotBase.discordClient.getModuleLoader().loadModule(module);
+	}
+	
+	public static void stopModule( String key )
+	{
+		discordModules.get(key).disable();
+	}
+	
+	public static void resumeModule( String key )
+	{
+		discordModules.get(key).enable(DiscordBotBase.discordClient);
+	}
+	
+	public static void removeModule( String key )
+	{
+		DiscordBotBase.discordClient.getModuleLoader().unloadModule(discordModules.get(key));
+		discordModules.remove(key);
+	}
+	
+	public static void registerCommand( Class<? extends DiscordChatCommand> classObj, String key )
+	{
+		try{
+			DiscordChatCommand command = classObj.newInstance();
+			
+			if(command == null){
+				return;
+			}
+			
+			if (!discordChatCommands.containsKey(key)) {
+				command.initPermissions();
+				discordChatCommands.put(key, command);
+				DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandRegisterEvent(command, key));
+			} else {
+				System.err.println("Unable to register command with key: " + key + ", command already exists");
+			}
+			
+		}catch (Exception e){
+			DiscordBotBase.handleException(e);
+		}
+	}
+	
+	public static void unRegisterCommand( String key )
+	{
+		if (discordChatCommands.containsKey(key)) {
+			DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandRemoveEvent(discordChatCommands.get(key), key));
+			discordChatCommands.remove(key);
+		} else {
+			System.err.println("Unable to remove no existing command with key: " + key);
+		}
 	}
 }

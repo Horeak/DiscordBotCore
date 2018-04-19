@@ -30,7 +30,7 @@ public interface ICustomSettings {
 						return ((IUser)t).mention();
 					}
 				}else if(set.getType() == Setting.SettingType.Text){
-					return t.toString();
+					return t != null ? t.toString() : null;
 					
 				}else if(set.getType() == Setting.SettingType.State){
 					if(t instanceof Boolean){
@@ -188,14 +188,13 @@ public interface ICustomSettings {
 				ServerSettings.setValue(message.getGuild(), CommandUtils.getKeyFromCommand(command) + "$" + setting.getKey(), user.getStringID());
 			}
 		}else if(setting.getType() == Setting.SettingType.Text){
-			StringBuilder builder = new StringBuilder(" ");
-			for(String t : args) if(t != null && !t.isEmpty()) builder.append(t);
-			String tg = builder.toString();
+			text = text.replace("_", " ");
+			text = text.replace("null", "");
 			
-			while(tg.startsWith(" ")) tg = tg.substring(1);
-			while(tg.endsWith(" ")) tg = tg.substring(0, tg.length() - 1);
+			while(text.startsWith(" ")) text = text.substring(1);
+			while(text.endsWith(" ")) text = text.substring(0, text.length() - 1);
 			
-			ServerSettings.setValue(message.getGuild(), CommandUtils.getKeyFromCommand(command) + "$" + setting.getKey(), tg);
+			ServerSettings.setValue(message.getGuild(), CommandUtils.getKeyFromCommand(command) + "$" + setting.getKey(), text);
 			
 		}else if(setting.getType() == Setting.SettingType.State){
 			boolean tg = false;

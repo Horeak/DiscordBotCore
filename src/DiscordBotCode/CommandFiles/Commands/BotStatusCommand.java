@@ -1,6 +1,6 @@
 package DiscordBotCode.CommandFiles.Commands;
 
-import DiscordBotCode.DeveloperSystem.DevCommandBase;
+import DiscordBotCode.CommandFiles.DiscordChatCommand;
 import DiscordBotCode.Extra.TimeUtil;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.DiscordBotBase;
@@ -10,15 +10,21 @@ import sx.blah.discord.util.EmbedBuilder;
 
 import java.awt.*;
 
-public class BotStatusCommand extends DevCommandBase {
+public class BotStatusCommand extends DiscordChatCommand
+{
 	@Override
 	public String commandPrefix() {
-		return "status";
+		return "botinfo";
 	}
 	
 	@Override
 	public void commandExecuted( IMessage message, String[] args ) {
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention(), getBuilder(message, args).build());
+	}
+	
+	@Override
+	public boolean canExecute( IMessage message, String[] args ) {
+		return true;
 	}
 	
 	protected EmbedBuilder getBuilder(IMessage message, String[] args){
@@ -35,10 +41,8 @@ public class BotStatusCommand extends DevCommandBase {
 		
 		builder.appendField("Version", DiscordBotBase.getVersion(), true);
 		builder.appendField("Uptime", TimeUtil.getText("upTime", "<days> <hours> <mins> <secs>", false), true);
-//		builder.appendField("Command sign", "\"" + getCommandSign(message.getChannel()).substring(1) + "\"", true);
 		builder.appendField("Ping", Utils.getPing(message) + "ms", true);
 		builder.appendField("Servers", Integer.toString(DiscordBotBase.discordClient.getGuilds().size()), true);
-//		builder.appendField("Commands", Integer.toString(CommandUtils.discordChatCommands.size()), true);
 		
 		builder.withThumbnail(DiscordBotBase.discordClient.getOurUser().getAvatarURL());
 		
