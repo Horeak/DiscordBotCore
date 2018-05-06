@@ -3,8 +3,10 @@ package DiscordBotCode.CommandFiles.Commands;
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.Utils;
+import DiscordBotCode.Misc.Annotation.DiscordCommand;
 import sx.blah.discord.handle.obj.IMessage;
 
+@DiscordCommand
 public class PingCommand extends DiscordChatCommand
 {
 	@Override
@@ -20,13 +22,7 @@ public class PingCommand extends DiscordChatCommand
 	}
 	
 	@Override
-	public boolean canExecute( IMessage message, String[] args )
-	{
-		return true;
-	}
-	
-	@Override
-	public boolean listCommand()
+	public boolean isCommandVisible()
 	{
 		return false;
 	}

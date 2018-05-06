@@ -5,11 +5,13 @@ import DiscordBotCode.Extra.TimeUtil;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.Utils;
+import DiscordBotCode.Misc.Annotation.DiscordCommand;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 
 import java.awt.*;
 
+@DiscordCommand
 public class BotStatusCommand extends DiscordChatCommand
 {
 	@Override
@@ -22,10 +24,6 @@ public class BotStatusCommand extends DiscordChatCommand
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention(), getBuilder(message, args).build());
 	}
 	
-	@Override
-	public boolean canExecute( IMessage message, String[] args ) {
-		return true;
-	}
 	
 	protected EmbedBuilder getBuilder(IMessage message, String[] args){
 		EmbedBuilder builder = new EmbedBuilder();

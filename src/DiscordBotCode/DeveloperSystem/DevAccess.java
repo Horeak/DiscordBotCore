@@ -2,61 +2,36 @@ package DiscordBotCode.DeveloperSystem;
 
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.DiscordBotBase;
-import DiscordBotCode.Misc.Config.GsonDataManager;
+import DiscordBotCode.Misc.Annotation.DataObject;
 import sx.blah.discord.handle.obj.IUser;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class DevAccess
 {
-	public static class Data{
-		public ConcurrentHashMap<Long, DevUserObject> devList = new ConcurrentHashMap<>();
-	}
+	@DataObject(file_path = "devs.json", name = "devList")
+	public static ConcurrentHashMap<Long, DevUserObject> devList = new ConcurrentHashMap<>();
 	
-	private static GsonDataManager<Data> data;
-	public static GsonDataManager<Data> data() {
-		if (data == null) {
-			try {
-				data = new GsonDataManager<>(Data.class, DiscordBotBase.FilePath + "/devs.json", Data::new);
-			} catch (IOException e) {
-				System.err.println("Cannot read from config file?");
-				e.printStackTrace();
-			}
-		}
-		return data;
-	}
+
 	public static void addDev(Long id){
-		if(!isDev(id) || isOwner(id) && !data().get().devList.containsKey(id)) {
-			data().get().devList.put(id, new DevUserObject());
-			
-			try {
-				data().save();
-			} catch (IOException e) {
-				DiscordBotBase.handleException(e);
-			}
+		if(!isDev(id) || isOwner(id) && !devList.containsKey(id)) {
+			devList.put(id, new DevUserObject());
 		}
 	}
 	
 	public static void removeDev(Long id){
 		if(isDev(id)) {
-			data().get().devList.remove(id);
-			
-			try {
-				data().save();
-			} catch (IOException e) {
-				DiscordBotBase.handleException(e);
-			}
+			devList.remove(id);
 		}
 	}
 	
 	public static DevUserObject getDevData( IUser user) {
 		if(!isDev(user)) return null;
 		
-		if(data().get().devList.containsKey(user.getLongID())){
-			return data().get().devList.get(user.getLongID());
+		if(devList.containsKey(user.getLongID())){
+			return devList.get(user.getLongID());
 		}
 		
 		return null;
@@ -64,14 +39,7 @@ public class DevAccess
 	
 	public static void updateDevData(IUser user, DevUserObject data){
 		if(!isDev(user)) return;
-		
-		data().get().devList.put(user.getLongID(), data);
-		
-		try {
-			data().save();
-		} catch (IOException e) {
-			DiscordBotBase.handleException(e);
-		}
+		devList.put(user.getLongID(), data);
 	}
 	
 	public static boolean isDev( IUser user){
@@ -91,14 +59,14 @@ public class DevAccess
 	}
 	
 	public static boolean isDev(Long id){
-		return data().get().devList.containsKey(id) || isOwner(id);
+		return devList.containsKey(id) || isOwner(id);
 	}
 	
 	
 	public static ArrayList<IUser> getDevs(){
 		ArrayList<IUser> users = new ArrayList<>();
 		
-		for(Long t : data().get().devList.keySet()){
+		for(Long t : devList.keySet()){
 			IUser temp = DiscordBotBase.discordClient.getUserByID(t);
 			
 			if(temp != null){
@@ -115,7 +83,7 @@ public class DevAccess
 	}
 	
 	public static void msgDevs(String message, IUser sender){
-		for(Map.Entry<Long, DevUserObject> t : data().get().devList.entrySet()){
+		for(Map.Entry<Long, DevUserObject> t : devList.entrySet()){
 			if(t.getValue().notifications){
 				IUser temp = DiscordBotBase.discordClient.getUserByID(t.getKey());
 				ChatUtils.sendMessage(temp.getOrCreatePMChannel(), message);
@@ -124,7 +92,7 @@ public class DevAccess
 	}
 	
 	public static void msgOwner(String message){
-		for(Map.Entry<Long, DevUserObject> t : data().get().devList.entrySet()){
+		for(Map.Entry<Long, DevUserObject> t : devList.entrySet()){
 			if(t.getValue().notifications){
 				IUser temp = DiscordBotBase.discordClient.getUserByID(t.getKey());
 				

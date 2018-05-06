@@ -1,11 +1,12 @@
 package DiscordBotCode.CommandFiles.Commands;
 
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordCommand;
+import DiscordBotCode.CommandFiles.CommandBase;
 import DiscordBotCode.CommandFiles.DiscordSubCommand;
 import DiscordBotCode.ICustomSettings;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
+import DiscordBotCode.Misc.Annotation.DiscordCommand;
 import DiscordBotCode.Setting;
 import org.apache.commons.lang.WordUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -17,6 +18,7 @@ import sx.blah.discord.util.PermissionUtils;
 import java.awt.*;
 import java.util.StringJoiner;
 
+@DiscordCommand
 public class HelpCommand extends DiscordChatCommand
 {
 	@Override
@@ -26,7 +28,7 @@ public class HelpCommand extends DiscordChatCommand
 	}
 	
 	@Override
-	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	public String getUsage( CommandBase sourceCommand, IMessage callMessage )
 	{
 		return "Help <command>";
 	}
@@ -47,7 +49,7 @@ public class HelpCommand extends DiscordChatCommand
 		
 		String commandName = String.join(" ", args);
 		
-		DiscordCommand command = CommandUtils.getCommandName(commandName, message.getChannel());
+		CommandBase command = CommandUtils.getCommandName(commandName, message.getChannel());
 		
 		if(command == null){
 			ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " Found no command with name \"" + commandName + "\"");
@@ -59,7 +61,7 @@ public class HelpCommand extends DiscordChatCommand
 			return;
 		}
 		
-		if(message.getChannel().isPrivate() && !command.canCommandBePrivateChat()){
+		if(message.getChannel().isPrivate() && !command.commandPrivateChat()){
 			ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " This command is not allowed in private chats!");
 			return;
 		}
@@ -73,7 +75,7 @@ public class HelpCommand extends DiscordChatCommand
 		
 		if (command instanceof DiscordChatCommand) {
 			for (DiscordSubCommand subCommand : ((DiscordChatCommand) command).subCommands) {
-				if(subCommand.listCommand() && subCommand.hasPermissions(message, args)) {
+				if(subCommand.isCommandVisible() && subCommand.hasPermissions(message, args)) {
 					String t = WordUtils.capitalize(subCommand.commandPrefix());
 					String usage = subCommand.getUsage(command, message);
 					String u = "\"" + command.commandPrefix() + " " + (usage != null ? usage : subCommand.commandPrefix()) + "\"";
@@ -120,8 +122,8 @@ public class HelpCommand extends DiscordChatCommand
 			embedBuilder.appendField("Required Permissions", joinerPerms.toString(), false);
 		}
 		
-		if(command.getRequiredRole(message.getChannel()) != null){
-			embedBuilder.appendField("Required Role", command.getRequiredRole(message.getChannel()).mention(), false);
+		if(DiscordBotCode.Main.PermissionUtils.getRequiredRole(command, message.getChannel()) != null){
+			embedBuilder.appendField("Required Role", DiscordBotCode.Main.PermissionUtils.getRequiredRole(command, message.getChannel()).mention(), false);
 		}
 		
 		if(!message.getChannel().isPrivate() && PermissionUtils.hasPermissions(message.getGuild(), message.getAuthor(), Permissions.ADMINISTRATOR)) {
@@ -172,15 +174,11 @@ public class HelpCommand extends DiscordChatCommand
 		ChatUtils.sendMessage(message.getChannel(), embedBuilder.build());
 	}
 	
-	@Override
-	public boolean canExecute( IMessage message, String[] args )
-	{
-		return true;
-	}
+
 	
 	
 	@Override
-	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	public String getDescription( CommandBase sourceCommand, IMessage callerMessage )
 	{
 		return null;
 	}

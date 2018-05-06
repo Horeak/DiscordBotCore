@@ -1,17 +1,19 @@
 package DiscordBotCode.CommandFiles.Commands;
 
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordCommand;
+import DiscordBotCode.CommandFiles.CommandBase;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.DiscordBotBase;
+import DiscordBotCode.Misc.Annotation.DiscordCommand;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.StatusType;
 import sx.blah.discord.util.EmbedBuilder;
 
+@DiscordCommand
 public class MembersCommand extends DiscordChatCommand {
 	@Override
-	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage ) {
+	public String getDescription( CommandBase sourceCommand, IMessage callerMessage ) {
 		return "Shows current status of members in the server by showing total amount of users and online/offline count";
 	}
 	
@@ -50,13 +52,10 @@ public class MembersCommand extends DiscordChatCommand {
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention(), builder.build());
 	}
 	
-	@Override
-	public boolean canExecute( IMessage message, String[] args ) {
-		return true;
-	}
+
 	
 	@Override
-	public boolean canCommandBePrivateChat() {
+	public boolean commandPrivateChat() {
 		return false;
 	}
 }

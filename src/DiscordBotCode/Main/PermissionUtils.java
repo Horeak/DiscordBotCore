@@ -1,23 +1,21 @@
 package DiscordBotCode.Main;
 
+import DiscordBotCode.CommandFiles.CommandBase;
+import DiscordBotCode.CommandFiles.Commands.IgnoredRolesCommand;
 import DiscordBotCode.DeveloperSystem.DevAccess;
+import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import sx.blah.discord.handle.obj.*;
 import sx.blah.discord.util.DiscordException;
-import sx.blah.discord.util.MissingPermissionsException;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
-import java.util.StringJoiner;
 
 public class PermissionUtils
 {
-	private static Field missingPermissionAccessField = null;
-	
 	private static boolean overRide(IUser user){
 		if(DiscordBotBase.debug){
-//			return true;
+			return true;
 		}
 		
 		try {
@@ -37,9 +35,9 @@ public class PermissionUtils
 		ArrayList<IRole> list = new ArrayList<>();
 		list.addAll(roles);
 		
-		if(Utils.data().get().getIgnoredRoles().containsKey(guild.getLongID())) {
+		if(IgnoredRolesCommand.getIgnoredRoles().containsKey(guild.getLongID())) {
 			list.removeIf(( role ) -> {
-				for (String t : Utils.data().get().getGuildIgnoredRoles(guild)){
+				for (String t : IgnoredRolesCommand.getGuildIgnoredRoles(guild)){
 					if(role.getName().matches(t)){
 						return true;
 					}
@@ -125,37 +123,25 @@ public class PermissionUtils
 		return false;
 	}
 	
-	public static String getPermsAsString( EnumSet<Permissions> permissions )
-	{
-		StringJoiner joiner = new StringJoiner(", ");
-		permissions.stream().map(Enum::name).forEach(joiner::add);
-		return joiner.toString();
-	}
 	
-	public static EnumSet<Permissions> getMissingPermissions( IUser user, IChannel channel, EnumSet<Permissions> perms )
-	{
-		if (missingPermissionAccessField == null) {
-			try {
-				missingPermissionAccessField = MissingPermissionsException.class.getDeclaredField("missing");
-				missingPermissionAccessField.setAccessible(true);
-				
-			} catch (NoSuchFieldException e) {
-				DiscordBotBase.handleException(e);
+	public static IRole getRequiredRole( CommandBase commandBase, IChannel channel ){
+		if(channel.isPrivate()){
+			return null;
+		}
+
+		String key = CommandUtils.getKeyFromCommand(commandBase);
+		String t = ServerSettings.getValue(channel.getGuild(), key);
+
+		if(t != null && !t.isEmpty()) {
+			if (Utils.isLong(t)) {
+				IRole role = DiscordBotBase.discordClient.getRoleByID(Long.parseLong(t));
+
+				if (role != null) {
+					return role;
+				}
 			}
 		}
-		
-		try {
-			sx.blah.discord.util.PermissionUtils.hasPermissions(channel, user, perms);
-		} catch (MissingPermissionsException e) {
-			try {
-				//noinspection unchecked
-				return (EnumSet<Permissions>) missingPermissionAccessField.get(e); //Reflection access
-			} catch (IllegalAccessException e1) {
-				DiscordBotBase.handleException(e1);
-			}
-		}
-		
+
 		return null;
 	}
-	
 }

@@ -1,19 +1,19 @@
 package DiscordBotCode.CommandFiles.PageSystem;
 
+import DiscordBotCode.Misc.Annotation.EventListener;
 import DiscordBotCode.Misc.CustomEntry;
-import sx.blah.discord.api.events.IListener;
 import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
 import sx.blah.discord.handle.obj.IMessage;
 
 import java.util.concurrent.ConcurrentHashMap;
 
-public class ReactionEvent implements IListener<ReactionAddEvent>
+public class ReactionEvent
 {
 	public static ConcurrentHashMap<Long, CustomEntry<IReactionCommand, Long>> messages = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<Long, IMessage> commands = new ConcurrentHashMap<>();
 	
-	@Override
-	public void handle( ReactionAddEvent event ) {
+	@EventListener
+	public static void handle( ReactionAddEvent event ) {
 		if(event.getMessage() == null) return;
 		
 		if(event.getAuthor() != null && event.getMessage().getAuthor() != null) {

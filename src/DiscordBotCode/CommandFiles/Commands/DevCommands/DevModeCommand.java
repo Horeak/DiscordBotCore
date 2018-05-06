@@ -1,10 +1,12 @@
-package DiscordBotCode.CommandFiles.Commands;
+package DiscordBotCode.CommandFiles.Commands.DevCommands;
 
 import DiscordBotCode.DeveloperSystem.DevCommandBase;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.DiscordBotBase;
+import DiscordBotCode.Misc.Annotation.DiscordCommand;
 import sx.blah.discord.handle.obj.IMessage;
 
+@DiscordCommand
 public class DevModeCommand extends DevCommandBase {
 	@Override
 	public String commandPrefix() {

@@ -1,26 +1,40 @@
 package DiscordBotCode.CommandFiles.Commands;
 
+import DiscordBotCode.CommandFiles.CommandBase;
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.CommandFiles.DiscordSubCommand;
 import DiscordBotCode.Main.ChatUtils;
-import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.PermissionUtils;
-import DiscordBotCode.Main.Utils;
+import DiscordBotCode.Misc.Annotation.DataObject;
+import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Misc.Annotation.SubCommand;
+import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IRole;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 
-import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
+@DiscordCommand
 public class IgnoredRolesCommand extends DiscordChatCommand {
-	public IgnoredRolesCommand() {
-		subCommands.add(new roles(this));
-		subCommands.add(new addIgnore(this));
-		subCommands.add(new removedIgnore(this));
+	
+	@DataObject(file_path = "data.json", name = "ignoredRoles")
+	public static HashMap<Long, CopyOnWriteArrayList<String>> ignoredRoles = new HashMap<>();
+	
+	public static HashMap<Long, CopyOnWriteArrayList<String>> getIgnoredRoles() {
+		return ignoredRoles;
+	}
+	
+	
+	public static CopyOnWriteArrayList<String> getGuildIgnoredRoles(IGuild guild){
+		if(!ignoredRoles.containsKey(guild.getLongID())){
+			ignoredRoles.put(guild.getLongID(), new CopyOnWriteArrayList<>());
+		}
+		return ignoredRoles.get(guild.getLongID());
 	}
 	
 	@Override
@@ -29,7 +43,7 @@ public class IgnoredRolesCommand extends DiscordChatCommand {
 	}
 	
 	@Override
-	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage ) {
+	public String getDescription( CommandBase sourceCommand, IMessage callerMessage ) {
 		return "A regex system to allow ignoring specific roles from the permission system in the bot";
 	}
 	
@@ -40,7 +54,7 @@ public class IgnoredRolesCommand extends DiscordChatCommand {
 	
 	@Override
 	public void commandExecuted( IMessage message, String[] args ) {
-		if(!Utils.data().get().getIgnoredRoles().containsKey(message.getGuild().getLongID())){
+		if(!getIgnoredRoles().containsKey(message.getGuild().getLongID())){
 			ChatUtils.sendMessage(message.getChannel(), "No ignored roles for this server!");
 			return;
 		}
@@ -48,7 +62,7 @@ public class IgnoredRolesCommand extends DiscordChatCommand {
 		ArrayList<EmbedBuilder> builders = new ArrayList<>();
 		int cur = 0;
 		
-		for(String t : Utils.data().get().getGuildIgnoredRoles(message.getGuild())){
+		for(String t : getGuildIgnoredRoles(message.getGuild())){
 			if(builders.size() <= cur || builders.get(cur) == null){
 				builders.add(new EmbedBuilder());
 				builders.get(cur).appendDescription("Ignored roles: ");
@@ -80,17 +94,15 @@ public class IgnoredRolesCommand extends DiscordChatCommand {
 		}
 	}
 	
-	@Override
-	public boolean canExecute( IMessage message, String[] args ) {
-		return true;
-	}
+
 	
 	@Override
-	public boolean canCommandBePrivateChat() {
+	public boolean commandPrivateChat() {
 		return false;
 	}
 }
 
+@SubCommand(parent = IgnoredRolesCommand.class)
 class removedIgnore extends DiscordSubCommand{
 	public removedIgnore( DiscordChatCommand baseCommand ) {
 		super(baseCommand);
@@ -102,7 +114,7 @@ class removedIgnore extends DiscordSubCommand{
 	}
 	
 	@Override
-	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage ) {
+	public String getDescription( CommandBase sourceCommand, IMessage callerMessage ) {
 		return "Removes a regex string which is used to filter out roles for permissions on commands";
 	}
 	
@@ -110,26 +122,19 @@ class removedIgnore extends DiscordSubCommand{
 	public void commandExecuted( IMessage message, String[] args ) {
 		String text = String.join(" ", args);
 		
-		for(String t : Utils.data().get().getGuildIgnoredRoles(message.getGuild())){
+		for(String t : IgnoredRolesCommand.getGuildIgnoredRoles(message.getGuild())){
 			if(text.equalsIgnoreCase(t)){
-				Utils.data().get().getGuildIgnoredRoles(message.getGuild()).remove(t);
+				IgnoredRolesCommand.getGuildIgnoredRoles(message.getGuild()).remove(t);
 				ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " The role ignore `" + text + "` has now been removed!");
 			}
 		}
 		
-		try {
-			Utils.data().save();
-		} catch (IOException e) {
-			DiscordBotBase.handleException(e);
-		}
 	}
 	
-	@Override
-	public boolean canExecute( IMessage message, String[] args ) {
-		return true;
-	}
+
 }
 
+@SubCommand(parent = IgnoredRolesCommand.class)
 class addIgnore extends DiscordSubCommand{
 	public addIgnore( DiscordChatCommand baseCommand ) {
 		super(baseCommand);
@@ -141,7 +146,7 @@ class addIgnore extends DiscordSubCommand{
 	}
 	
 	@Override
-	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage ) {
+	public String getDescription( CommandBase sourceCommand, IMessage callerMessage ) {
 		return "Adds a regex string which is used to filter out roles for permissions on commands";
 	}
 	
@@ -149,29 +154,21 @@ class addIgnore extends DiscordSubCommand{
 	public void commandExecuted( IMessage message, String[] args ) {
 		String text = String.join(" ", args);
 		
-		for(String t : Utils.data().get().getGuildIgnoredRoles(message.getGuild())){
+		for(String t : IgnoredRolesCommand.getGuildIgnoredRoles(message.getGuild())){
 			if(text.equalsIgnoreCase(t)){
 				ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " This role ignore has already been added!");
 				return;
 			}
 		}
 		
-		Utils.data().get().getGuildIgnoredRoles(message.getGuild()).add(text);
+		IgnoredRolesCommand.getGuildIgnoredRoles(message.getGuild()).add(text);
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " The role ignore `" + text + "` has now been added!");
-		
-		try {
-			Utils.data().save();
-		} catch (IOException e) {
-			DiscordBotBase.handleException(e);
-		}
 	}
 	
-	@Override
-	public boolean canExecute( IMessage message, String[] args ) {
-		return true;
-	}
+
 }
 
+@SubCommand(parent = IgnoredRolesCommand.class)
 class roles extends DiscordSubCommand{
 	public roles( DiscordChatCommand baseCommand ) {
 		super(baseCommand);
@@ -188,7 +185,7 @@ class roles extends DiscordSubCommand{
 		ArrayList<IRole> roles1 = PermissionUtils.filterRoles(message.getGuild(), roles);
 		roles.removeAll(roles1);
 
-		if(!Utils.data().get().getIgnoredRoles().containsKey(message.getGuild().getLongID())){
+		if(!IgnoredRolesCommand.getIgnoredRoles().containsKey(message.getGuild().getLongID())){
 			ChatUtils.sendMessage(message.getChannel(), "No ignored roles for this server!");
 			return;
 		}
@@ -220,8 +217,5 @@ class roles extends DiscordSubCommand{
 		}
 	}
 	
-	@Override
-	public boolean canExecute( IMessage message, String[] args ) {
-		return true;
-	}
+
 }

@@ -1,7 +1,5 @@
 package DiscordBotCode.Main;
 
-import DiscordBotCode.Misc.Config.Data;
-import DiscordBotCode.Misc.Config.GsonDataManager;
 import org.apache.commons.lang3.StringUtils;
 import sx.blah.discord.handle.obj.IMessage;
 
@@ -15,7 +13,6 @@ import java.util.regex.Pattern;
 public class Utils
 {
 	public static Random rand = new Random();
-	private static GsonDataManager<Data> data;
 	
 	public static long getPing( IMessage message){
 		Long t = System.currentTimeMillis() - message.getCreationDate().toEpochMilli();
@@ -100,18 +97,6 @@ public class Utils
 		return !sc.hasNext();
 	}
 	
-	public static void reportMemoryUsage()
-	{
-		Runtime runtime = Runtime.getRuntime();
-		int mb = 1024 * 1024;
-		
-		System.out.println("######################################");
-		System.out.println("Used Memory: " + (runtime.totalMemory() - runtime.freeMemory()) / mb + "mb");
-		System.out.println("Free Memory:" + runtime.freeMemory() / mb + "mb");
-		System.out.println("Total Memory:" + runtime.totalMemory() / mb + "mb");
-		System.out.println("Max Memory:" + runtime.maxMemory() / mb + "mb");
-		System.out.println("######################################");
-	}
 	
 	public static double compareStrings( String stringA, String stringB )
 	{
@@ -175,31 +160,5 @@ public class Utils
 		}
 		
 		return list;
-	}
-	
-	public static GsonDataManager<Data> data() {
-		if (data == null) {
-			try {
-				data = new GsonDataManager<>(Data.class, DiscordBotBase.FilePath + "/data.json", Data::new);
-			} catch (IOException e) {
-				System.err.println("Cannot read from config file?");
-				e.printStackTrace();
-			}
-		}
-		return data;
-	}
-	
-	public static Object getData(String key){
-		return data().get().data.get(key);
-	}
-	
-	public static void setData(String key, Object value){
-		data().get().data.put(key, value);
-		
-		try {
-			data().save();
-		} catch (IOException e) {
-			DiscordBotBase.handleException(e);
-		}
 	}
 }

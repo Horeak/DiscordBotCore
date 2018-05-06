@@ -6,7 +6,7 @@ import sx.blah.discord.handle.obj.IChannel;
 
 import java.util.ArrayList;
 
-public abstract class DiscordChatCommand extends DiscordCommand
+public abstract class DiscordChatCommand extends CommandBase
 {
 	public ArrayList<DiscordSubCommand> subCommands = new ArrayList<>();
 	

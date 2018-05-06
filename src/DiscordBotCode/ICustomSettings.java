@@ -1,6 +1,6 @@
 package DiscordBotCode;
 
-import DiscordBotCode.CommandFiles.DiscordCommand;
+import DiscordBotCode.CommandFiles.CommandBase;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.ServerSettings;
@@ -12,7 +12,7 @@ public interface ICustomSettings {
 	
 	boolean canUpdateSetting( IMessage message, String[] args);
 	
-	default String getValueOfSetting( IGuild guild, String settingKey, DiscordCommand command ){
+	default String getValueOfSetting( IGuild guild, String settingKey, CommandBase command ){
 		for(Setting set : getSettings()) {
 			if(set.getKey().equalsIgnoreCase(settingKey)) {
 				Object t = getSettingValue(guild, set, command);
@@ -43,7 +43,7 @@ public interface ICustomSettings {
 		return null;
 	}
 	
-	default Object getSettingValue(IGuild guild, Setting setting, DiscordCommand command){
+	default Object getSettingValue(IGuild guild, Setting setting, CommandBase command){
 		String t = ServerSettings.getValue(guild, CommandUtils.getKeyFromCommand(command) + "$" + setting.getKey());
 		
 		
@@ -86,7 +86,7 @@ public interface ICustomSettings {
 		return setting.getDefValue();
 	}
 	
-	default void updateSetting( IMessage message, String[] args, Setting setting, DiscordCommand command){
+	default void updateSetting( IMessage message, String[] args, Setting setting, CommandBase command){
 		String text = String.join("_", args);
 		
 		if(setting.getType() == Setting.SettingType.Channel){

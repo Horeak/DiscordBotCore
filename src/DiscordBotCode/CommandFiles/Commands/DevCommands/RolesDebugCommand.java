@@ -1,13 +1,15 @@
-package DiscordBotCode.CommandFiles.Commands;
+package DiscordBotCode.CommandFiles.Commands.DevCommands;
 
 import DiscordBotCode.DeveloperSystem.DevCommandBase;
 import DiscordBotCode.Main.ChatUtils;
+import DiscordBotCode.Misc.Annotation.DiscordCommand;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IRole;
 import sx.blah.discord.util.RequestBuffer;
 
 import java.util.ArrayList;
 
+@DiscordCommand
 public class RolesDebugCommand extends DevCommandBase
 {
 	@Override
@@ -43,7 +45,7 @@ public class RolesDebugCommand extends DevCommandBase
 	}
 	
 	@Override
-	public boolean canCommandBePrivateChat()
+	public boolean commandPrivateChat()
 	{
 		return false;
 	}

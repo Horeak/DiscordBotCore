@@ -194,7 +194,7 @@ public class ChatUtils
 			}
 			
 			try {
-				String html = IOUtils.toString(ur.openStream(), "utf-8");
+				String html = IOUtils.toString(ur.openStream(), "utf-8");//TODO This line causes a SSLHandshakeException
 				Document doc = Jsoup.parseBodyFragment(html);
 				
 				Elements titleEl = doc.select("meta[property=og:title]");

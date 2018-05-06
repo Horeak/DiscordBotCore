@@ -1,7 +1,7 @@
 package DiscordBotCode.Main.CommandHandeling;
 
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordCommand;
+import DiscordBotCode.CommandFiles.CommandBase;
 import DiscordBotCode.CommandFiles.DiscordSubCommand;
 import DiscordBotCode.DeveloperSystem.DevCommandBase;
 import DiscordBotCode.Main.ChatUtils;
@@ -11,7 +11,6 @@ import DiscordBotCode.Main.CustomEvents.CommandFailedExecuteEvent;
 import DiscordBotCode.Main.CustomEvents.CommandRegisterEvent;
 import DiscordBotCode.Main.CustomEvents.CommandRemoveEvent;
 import DiscordBotCode.Main.DiscordBotBase;
-import DiscordBotCode.Main.DiscordModule;
 import DiscordBotCode.Main.PermissionUtils;
 import sx.blah.discord.handle.impl.obj.Message;
 import sx.blah.discord.handle.obj.IChannel;
@@ -29,7 +28,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class CommandUtils
 {
 	public static ConcurrentHashMap<String, DiscordChatCommand> discordChatCommands = new ConcurrentHashMap<>(); //All commands added to the program
-	public static ConcurrentHashMap<String, DiscordModule> discordModules = new ConcurrentHashMap<>();
 	
 	public static CopyOnWriteArrayList<ICommandFormatter> formatters = new CopyOnWriteArrayList<>();
 	
@@ -38,22 +36,16 @@ public class CommandUtils
 		IMessage m1 = formatMessage(m1T);
 		String text = m1.getContent();
 		
-		DiscordCommand command = getDiscordCommand(text, m1.getChannel());
+		CommandBase command = getDiscordCommand(text, m1.getChannel());
 		
 		if (command != null) {
 			String[] args = getArgsFromText(text, command, m1.getChannel());
 			boolean permission = command.hasPermissions(m1, args);
 			
-			if (!command.canCommandBePrivateChat() && m1.getChannel().isPrivate()) {
+			if (!command.commandPrivateChat() && m1.getChannel().isPrivate()) {
 				ChatUtils.sendMessage(m1.getChannel(), "*This command is not available for private channels!*");
 				return;
 			}
-			
-			if (command.getUserWhitelist() != null && !Arrays.asList(command.getUserWhitelist()).contains(m1.getAuthor().getStringID())) {
-				ChatUtils.sendMessage(m1.getChannel(), "*You are not authorized to use that command!*");
-				return;
-			}
-			
 			
 			if (permission) {
 				if (command.canExecute(m1, args)) {//Execute the command and send it to the botBase
@@ -62,12 +54,12 @@ public class CommandUtils
 					
 					return; //End code on successful command execution
 				} else {
-					ChatUtils.sendMessage(m1.getChannel(), command.unableToExecuteCommand(m1));
+					ChatUtils.sendMessage(m1.getChannel(), "*Could not execute command: " + m1.getContent() + "*");
 				}
 			}else{
-				if(command.getRequiredRole(m1.getChannel()) != null){
-					if(!PermissionUtils.hasRole(m1.getAuthor(), m1.getGuild(), command.getRequiredRole(m1.getChannel()), true)){
-						ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You must be ` " + command.getRequiredRole(m1.getChannel()).getName() + " ` or above to use this command!");
+				if(PermissionUtils.getRequiredRole(command, m1.getChannel()) != null){
+					if(!PermissionUtils.hasRole(m1.getAuthor(), m1.getGuild(), PermissionUtils.getRequiredRole(command, m1.getChannel()), true)){
+						ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You must be ` " + PermissionUtils.getRequiredRole(command, m1.getChannel()).getName() + " ` or above to use this command!");
 					}
 				}else {
 					ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You do not have the required permissions to use this command!");
@@ -75,7 +67,7 @@ public class CommandUtils
 			}
 		}
 		
-		DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandFailedExecuteEvent(command, m1, Thread.currentThread()));//Command failed from unknown error. Sending it to botBase
+		DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandFailedExecuteEvent(command, m1, Thread.currentThread()));//DiscordCommand failed from unknown error. Sending it to botBase
 	}
 	
 	public static MessageObject getCurrentHandledMessage(){
@@ -199,7 +191,7 @@ public class CommandUtils
 		return null;
 	}
 	
-	private static DiscordSubCommand getSubCommandFromCommand( String text, DiscordCommand command, IChannel channel )
+	private static DiscordSubCommand getSubCommandFromCommand( String text, CommandBase command, IChannel channel )
 	{
 		if (text == null || text.isEmpty() || command == null) {
 			return null;
@@ -222,9 +214,9 @@ public class CommandUtils
 		return null;
 	}
 	
-	public static DiscordCommand getDiscordCommand( String text, IChannel channel )
+	public static CommandBase getDiscordCommand( String text, IChannel channel )
 	{
-		DiscordCommand commandReturn = getCommand(text, channel, true);
+		CommandBase commandReturn = getCommand(text, channel, true);
 		if (getSubCommandFromCommand(text, commandReturn, channel) != null) {
 			commandReturn = getSubCommandFromCommand(text, commandReturn, channel);
 		}
@@ -232,8 +224,8 @@ public class CommandUtils
 		return commandReturn;
 	}
 	
-	public static DiscordCommand getCommandName(String text, IChannel channel){
-		DiscordCommand commandReturn = getCommand(text, channel, false);
+	public static CommandBase getCommandName( String text, IChannel channel){
+		CommandBase commandReturn = getCommand(text, channel, false);
 		if (getSubCommandFromCommand(text, commandReturn, channel) != null) {
 			commandReturn = getSubCommandFromCommand(text, commandReturn, channel);
 		}
@@ -241,7 +233,7 @@ public class CommandUtils
 		return commandReturn;
 	}
 	
-	public static String[] getArgsFromText( String text, DiscordCommand command, IChannel channel )
+	public static String[] getArgsFromText( String text, CommandBase command, IChannel channel )
 	{
 		String tempReplace = getCommandPrefix(text, command, channel, true);
 		String temp = text.substring(tempReplace.length()); //TODO Find a better way incase there is mid sentence commands sometime
@@ -260,12 +252,12 @@ public class CommandUtils
 		return list.toArray(new String[list.size()]);
 	}
 	
-	private static boolean compareCommandPrefix(String text, DiscordCommand command, IChannel channel, boolean checkSign){
+	private static boolean compareCommandPrefix( String text, CommandBase command, IChannel channel, boolean checkSign){
 		return getCommandPrefix(text, command, channel, checkSign) != null;
 	}
 	
 	
-	private static String getCommandPrefix(String text, DiscordCommand command, IChannel channel, boolean checkSign){
+	private static String getCommandPrefix( String text, CommandBase command, IChannel channel, boolean checkSign){
 		String commandPrefix = command instanceof DiscordChatCommand ? ((DiscordChatCommand)command).getCommandSign(channel) : command instanceof DiscordSubCommand ? ((DiscordSubCommand)command).baseCommand.getCommandSign(channel) : DiscordBotBase.getCommandSign();
 		
 		if(!checkSign){
@@ -288,12 +280,6 @@ public class CommandUtils
 					break;
 				}
 				
-				if(subCommand.baseCommand.fuzzyDetection()){
-					if(tempText.contains(commandPrefix + prefix)){
-						commandPrefix += prefix + " ";
-						break;
-					}
-				}
 			}
 		}
 		
@@ -306,25 +292,21 @@ public class CommandUtils
 			
 			prefix = commandPrefix + prefix;
 			
-			if(text.length() > prefix.length() && !command.fuzzyDetection()){ //Hacky implementation
+			if(text.length() > prefix.length() ){ //Hacky implementation
 				prefix += " ";
 			}
 			
 			if(tempText.startsWith(prefix) || tempText.equals(prefix)){
 				return prefix;
 			}
-			
-			if(command.fuzzyDetection()){
-				if(tempText.contains(prefix)){
-					return prefix;
-				}
-			}
 		}
 		
 		return null;
 	}
 	
-	public static String getKeyFromCommand(DiscordCommand command){
+	public static String getKeyFromCommand(CommandBase command){
+		if(command == null) return null;
+		
 		if(command instanceof DiscordSubCommand){
 			DiscordSubCommand subCommand = (DiscordSubCommand)command;
 
@@ -335,8 +317,12 @@ public class CommandUtils
 			}
 		}else {
 			for (Map.Entry<String, DiscordChatCommand> ent : discordChatCommands.entrySet()) {
-				if (Objects.equals(command.getClass().getName(), ent.getValue().getClass().getName())) {
-					return ent.getKey();
+				if(ent.getValue() == null || ent.getValue().getClass() == null) continue;
+				
+				if(command.getClass() != null && ent.getValue().getClass() != null) {
+					if (Objects.equals(command.getClass().getName(), ent.getValue().getClass().getName())) {
+						return ent.getKey();
+					}
 				}
 			}
 		}
@@ -344,41 +330,20 @@ public class CommandUtils
 		return null;
 	}
 	
-	public static void addModule( DiscordModule module, String key )
-	{
-		discordModules.put(key, module);
-		DiscordBotBase.discordClient.getModuleLoader().loadModule(module);
-	}
-	
-	public static void stopModule( String key )
-	{
-		discordModules.get(key).disable();
-	}
-	
-	public static void resumeModule( String key )
-	{
-		discordModules.get(key).enable(DiscordBotBase.discordClient);
-	}
-	
-	public static void removeModule( String key )
-	{
-		DiscordBotBase.discordClient.getModuleLoader().unloadModule(discordModules.get(key));
-		discordModules.remove(key);
-	}
-	
-	public static void registerCommand( Class<? extends DiscordChatCommand> classObj, String key )
+	public static DiscordChatCommand registerCommand( Class<? extends DiscordChatCommand> classObj, String key )
 	{
 		try{
 			DiscordChatCommand command = classObj.newInstance();
 			
 			if(command == null){
-				return;
+				return null;
 			}
 			
 			if (!discordChatCommands.containsKey(key)) {
 				command.initPermissions();
 				discordChatCommands.put(key, command);
 				DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandRegisterEvent(command, key));
+				return command;
 			} else {
 				System.err.println("Unable to register command with key: " + key + ", command already exists");
 			}
@@ -386,6 +351,8 @@ public class CommandUtils
 		}catch (Exception e){
 			DiscordBotBase.handleException(e);
 		}
+		
+		return null;
 	}
 	
 	public static void unRegisterCommand( String key )

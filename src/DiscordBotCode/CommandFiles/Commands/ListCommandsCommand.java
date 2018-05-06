@@ -1,9 +1,10 @@
 package DiscordBotCode.CommandFiles.Commands;
 
+import DiscordBotCode.CommandFiles.CommandBase;
 import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
+import DiscordBotCode.Misc.Annotation.DiscordCommand;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 
@@ -11,8 +12,12 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Map;
 
+@DiscordCommand
 public class ListCommandsCommand extends DiscordChatCommand
 {
+	
+	//TODO Add a option to show commands avaliable for a specific role
+	
 	@Override
 	public void commandExecuted( IMessage message, String[] args )
 	{
@@ -30,9 +35,9 @@ public class ListCommandsCommand extends DiscordChatCommand
 		for (Map.Entry<String, DiscordChatCommand> ent : CommandUtils.discordChatCommands.entrySet()) {
 			DiscordChatCommand command = ent.getValue();
 			
-			if (!message.getChannel().isPrivate() || command.canCommandBePrivateChat()) {
-				if (command.listCommand()) {
-					if (command.hasPermissions(message, new String[]{}) && (!message.getChannel().isPrivate() || command.canCommandBePrivateChat())) {
+			if (!message.getChannel().isPrivate() || command.commandPrivateChat()) {
+				if (command.isCommandVisible()) {
+					if (command.hasPermissions(message, new String[]{}) && (!message.getChannel().isPrivate() || command.commandPrivateChat())) {
 						String title = getCommandSign(message.getChannel()) + command.commandPrefix() + "\n";
 						String usage = command.getUsage(this, message);
 						String description = command.getDescription(this, message);
@@ -81,28 +86,21 @@ public class ListCommandsCommand extends DiscordChatCommand
 			ChatUtils.sendMessage(message.getAuthor().getOrCreatePMChannel(), bd.build());
 		}
 	}
-	
-	@Override
-	public boolean canExecute( IMessage message, String[] args )
-	{
-		
-		return true;
-	}
-	
+
 	@Override
 	public String commandPrefix()
 	{
 		
 		return "commands";
 	}
-	public boolean listCommand()
+	public boolean isCommandVisible()
 	{
 		
 		return false;
 	}
 	
 	@Override
-	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	public String getDescription( CommandBase sourceCommand, IMessage callerMessage )
 	{
 		
 		return "Lists all commands available on the bot";

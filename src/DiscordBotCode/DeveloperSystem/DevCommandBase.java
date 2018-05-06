@@ -25,7 +25,7 @@ public abstract class DevCommandBase extends DiscordChatCommand
 	}
 	
 	@Override
-	public boolean listCommand()
+	public boolean isCommandVisible()
 	{
 		return false;
 	}

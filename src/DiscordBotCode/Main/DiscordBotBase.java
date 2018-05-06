@@ -1,6 +1,7 @@
 package DiscordBotCode.Main;
 
-import DiscordBotCode.CommandFiles.PageSystem.ReactionEvent;
+import DiscordBotCode.CommandFiles.DiscordChatCommand;
+import DiscordBotCode.CommandFiles.DiscordSubCommand;
 import DiscordBotCode.Extra.FileGetter;
 import DiscordBotCode.Extra.FileUtil;
 import DiscordBotCode.Extra.TimeUtil;
@@ -10,13 +11,23 @@ import DiscordBotCode.Main.CommandHandeling.Formatters.CommandDataFormat;
 import DiscordBotCode.Main.CommandHandeling.Formatters.IgnoredMessageFormat;
 import DiscordBotCode.Main.CommandHandeling.Formatters.MentionsMessageFormat;
 import DiscordBotCode.Main.CustomEvents.BotCloseEvent;
+import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Misc.Annotation.EventListener;
+import DiscordBotCode.Misc.Annotation.SubCommand;
+import DiscordBotCode.Misc.Config.DataHandler;
 import DiscordBotCode.Misc.LoggerUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.RegexFileFilter;
+import org.apache.commons.lang.WordUtils;
 import org.reflections.Reflections;
+import org.reflections.scanners.FieldAnnotationsScanner;
+import org.reflections.scanners.MethodAnnotationsScanner;
+import org.reflections.scanners.SubTypesScanner;
+import org.reflections.scanners.TypeAnnotationsScanner;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
+import sx.blah.discord.api.events.Event;
 import sx.blah.discord.api.events.IListener;
 import sx.blah.discord.handle.impl.events.guild.GuildCreateEvent;
 import sx.blah.discord.handle.impl.events.shard.DisconnectedEvent;
@@ -28,10 +39,11 @@ import sx.blah.discord.util.BotInviteBuilder;
 import javax.management.ReflectionException;
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.Set;
-import java.util.StringJoiner;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,6 +66,9 @@ public class DiscordBotBase
 	public static boolean debug = false;
 	public static boolean modules = false;
 	
+	private static boolean initListeners = false;
+	private static HashMap<Class, ArrayList<Method>> eventListeners = new HashMap<>();
+	
 	public static String FilePath = "";
 	public static File baseFilePath;
 	
@@ -65,6 +80,9 @@ public class DiscordBotBase
 	private static ArrayList<String> args = null;
 	
 	private static ArrayList<BotLauncher> launchers = new ArrayList<>();
+	
+	private static Reflections annoReflection;
+	
 	
 	public static void main(String[] args)
 	{
@@ -79,6 +97,9 @@ public class DiscordBotBase
 		
 		System.out.println("debug: " + debug);
 		System.out.println("modules: " + modules);
+		
+		Reflections.log = null;
+		annoReflection = new Reflections("", new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new MethodAnnotationsScanner(), new SubTypesScanner());
 		
 		try {
 			initFile();
@@ -104,6 +125,8 @@ public class DiscordBotBase
 		tempFolder = FileGetter.getFolder(DiscordBotBase.FilePath + "/tmp/");
 		
 		LoggerUtil.activate();
+		
+		DataHandler.init(FilePath);
 		
 		infoFile.delete();
 		System.out.println("File init done.");
@@ -146,9 +169,6 @@ public class DiscordBotBase
 		
 		ClientBuilder builder = new ClientBuilder();
 		builder.withToken(token);
-		builder.withRecommendedShardCount();
-		builder.withMinimumDispatchThreads(2);
-		
 		
 		discordClient = builder.build();
 		discordClient.login();
@@ -177,9 +197,7 @@ public class DiscordBotBase
 			
 			System.out.println("Sub bot init done.");
 		}catch (Exception e){
-			if(e instanceof ReflectionException){
-			
-			}else{
+			if (!(e instanceof ReflectionException)) {
 				DiscordBotBase.handleException(e);
 			}
 		}
@@ -205,38 +223,100 @@ public class DiscordBotBase
 		Runtime.getRuntime().addShutdownHook(new Thread(DiscordBotBase::onBotClose));
 		System.out.println("Startup init done.");
 		
-		System.out.println("Init default commands");
-		BaseCommandRegister.initDefaultCommands();
-		
+		initListeners();
 		initCommands();
-		initModules();
 		
 		System.out.println("System startup took: " + (System.currentTimeMillis() - TimeUtil.getStartTime("startup_time")) + "ms");
 	}
 	
+	
+	public static void initListeners(){
+		System.out.println("Start listener register");
+		
+		if(!initListeners){
+			Set<Method> listeners = annoReflection.getMethodsAnnotatedWith(EventListener.class);
+			
+			for(Method method : listeners){
+				if(!Modifier.isStatic(method.getModifiers())) continue;
+				
+				Class[] cc = method.getParameterTypes();
+				
+				if(cc != null && cc.length == 1){
+					if(!eventListeners.containsKey(cc[0])){
+						eventListeners.put(cc[0], new ArrayList<>());
+					}
+					
+					eventListeners.get(cc[0]).add(method);
+				}
+			}
+			
+			initListeners = true;
+		}
+		
+		DiscordBotBase.discordClient.getDispatcher().registerListener((IListener<Event>) e -> {
+			if(eventListeners.containsKey(e.getClass())){
+				for(Method method : eventListeners.get(e.getClass())){
+					try {
+						method.invoke(method.getDeclaringClass(), e);
+					} catch (IllegalAccessException | InvocationTargetException e1) {
+						if(e1 instanceof InvocationTargetException){
+							InvocationTargetException e2 = (InvocationTargetException)e1;
+							DiscordBotBase.handleException(new Exception(e2.getCause()));
+						}else {
+							DiscordBotBase.handleException(e1);
+						}
+					}
+				}
+			}
+		});
+
+		
+		System.out.println("End listener register");
+	}
+	
 	public static void initCommands(){
 		System.out.println("Start command register");
-		
 		int commands = CommandUtils.discordChatCommands.size();
 		
-		for(BotLauncher launcher : launchers){
-			launcher.registerCommands();
+		Set<Class<?>> commands1 = annoReflection.getTypesAnnotatedWith(DiscordCommand.class);
+		ArrayList<DiscordChatCommand> commandX = new ArrayList<>();
+		
+		for(Class c : commands1){
+			DiscordCommand co = (DiscordCommand) c.getAnnotation(DiscordCommand.class);
+			
+			if(!co.debug() || debug) {
+				DiscordChatCommand cc = CommandUtils.registerCommand(c, WordUtils.uncapitalize(c.getSimpleName()));
+				
+				if (cc != null) {
+					commandX.add(cc);
+				}
+			}
+		}
+		
+		Set<Class<?>> subCommands = annoReflection.getTypesAnnotatedWith(SubCommand.class);
+		
+		for(Class c : subCommands){
+			SubCommand sc = (SubCommand) c.getAnnotation(SubCommand.class);
+			
+			if(!sc.debug() || debug) {
+				for (DiscordChatCommand cc : commandX) {
+					if (sc.parent() != null && sc.parent() == cc.getClass()) {
+						try {
+							Constructor t = c.getDeclaredConstructor(DiscordChatCommand.class);
+							t.setAccessible(true);
+							
+							cc.subCommands.add((DiscordSubCommand) t.newInstance(cc));
+						} catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+							DiscordBotBase.handleException(e);
+						}
+					}
+				}
+			}
 		}
 		
 		System.out.println("End command register, commands registered = " + (CommandUtils.discordChatCommands.size() - commands));
 	}
 	
-	public static void initModules(){
-		System.out.println("Start module register");
-		
-		int modules = CommandUtils.discordModules.size();
-		
-		for(BotLauncher launcher : launchers){
-			launcher.registerModules();
-		}
-		
-		System.out.println("End module register, modules registered = " + (CommandUtils.discordModules.size() - modules));
-	}
 	
 	public static String getGuilds(){
 		StringJoiner joiner = new StringJoiner(", ");
@@ -263,12 +343,6 @@ public class DiscordBotBase
 	
 	protected static void registerListeners()
 	{
-		discordClient.getDispatcher().registerListener(new CommandInputEvents.messageListener());
-		discordClient.getDispatcher().registerListener(new CommandInputEvents.messageEditedListener());
-		discordClient.getDispatcher().registerListener(new ReactionEvent());
-		
-		discordClient.getDispatcher().registerListener(new BaseCommandRegister());
-		
 		discordClient.getDispatcher().registerListener((IListener<DisconnectedEvent>) ( event ) -> LoggerUtil.log("Client disconnected for reason: " + event.getReason()));
 		discordClient.getDispatcher().registerListener((IListener<ReconnectFailureEvent>) ( event ) -> LoggerUtil.log("Client reconnect attempt num " + event.getCurrentAttempt() + " failed!"));
 		discordClient.getDispatcher().registerListener((IListener<GuildCreateEvent>) ( event ) -> LoggerUtil.log("Bot has joined server \"" + event.getGuild().getName() + "\""));
@@ -305,13 +379,15 @@ public class DiscordBotBase
 	
 	public static void reconnectBot(){
 		boolean t = canReconnect();
-		System.out.println("canReconnect() -> " + t);
-		
 		if(t) {
 			System.out.println("Bot reconnecting!");
-			discordClient.logout();
-			discordClient.login();
 			lastReconnect = System.currentTimeMillis();
+			discordClient.logout();
+			
+			initBot();
+			
+			registerListeners();
+			initListeners();
 		}
 	}
 	
