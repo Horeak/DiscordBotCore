@@ -8,29 +8,26 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
-import org.reflections.Reflections;
-import org.reflections.scanners.FieldAnnotationsScanner;
+import com.google.gson.reflect.TypeToken;
 
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class DataHandler
 {
 	private static CopyOnWriteArrayList<Field> objects = new CopyOnWriteArrayList<>();
-	private static ConcurrentHashMap<Field, Object> values = new ConcurrentHashMap<>();
+	private static ConcurrentHashMap<Field, String> values = new ConcurrentHashMap<>();
 	private static ConcurrentHashMap<Field, Class> fieldClasses = new ConcurrentHashMap<>();
 	
 	private static final Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
 	private static final Gson gson1 = new GsonBuilder().serializeNulls().create();
+	
+	public static boolean load_done = false;
 	
 	private static String prefix = "";
 	
@@ -48,39 +45,42 @@ public class DataHandler
 		{
 			super.run();
 			
-			//TODO Add support for classes annotated with DataObject
+			Set<Field> fields = DiscordBotBase.getReflection().getFieldsAnnotatedWith(DataObject.class);
+			Set<Class<?>> classes = DiscordBotBase.getReflection().getTypesAnnotatedWith(DataObject.class);
 			
-			Reflections reflections = new Reflections("", new FieldAnnotationsScanner());
-			Set<Field> fields = reflections.getFieldsAnnotatedWith(DataObject.class);
+			initFields(fields);
 			
-			for(Field field : fields){
-				try {
-					load(field);
-				} catch (IOException | IllegalAccessException e) {
-					DiscordBotBase.handleException(e);
-				}
+			for(Class c : classes){
+				loadClass(c);
 				
-				objects.add(field);
-				Object t = null;
-				
-				try {
-					t = getValue(field);
-				} catch (IllegalAccessException e) {
-					DiscordBotBase.handleException(e);
-				}
-				
-				if(t != null) {
-					updateValue(field, t);
+				for(Field fe : c.getFields()) {
+					if (Modifier.isStatic(fe.getModifiers())) {
+						objects.add(fe);
+						
+						Object t = getValue(fe);
+						if(t != null) {
+							updateValue(fe, t);
+						}
+					}
 				}
 			}
 			
-			//TODO Try and find a more optimized way of checking and saving values in near real time
+			load_done = true;
+			
 			while(isAlive()){
-				try {
-					check();
-				} catch (IllegalAccessException e) {
-					DiscordBotBase.handleException(e);
+				if(queueDataLoad.size() > 0){
+					if(DiscordBotBase.discordClient != null && DiscordBotBase.discordClient.isReady()){
+						for(int i = 0; i < queueDataLoad.size(); i++){
+							Field fe = queueDataLoad.get(i);
+							
+							notifyDataLoad(fe);
+							queueDataLoad.remove(i);
+						}
+					}
 				}
+				
+				//TODO Try and find a more optimized way of checking and saving values in near real time
+				check();
 				
 				try {
 					Thread.sleep(100);
@@ -91,22 +91,37 @@ public class DataHandler
 		}
 	}
 	
-	private static void updateValue(Field fe, Object t){
-		Object tg = gson.fromJson(gson.toJson(t), fe.getGenericType());
-		values.put(fe, tg); //TODO This is very bad!
+	private static void initFields( Collection<Field> fields )
+	{
+		for(Field fe : fields) {
+			if (Modifier.isStatic(fe.getModifiers())) {
+				objects.add(fe);
+				
+				load(fe);
+				Object t = getValue(fe);
+				
+				if(t != null) {
+					updateValue(fe, t);
+				}
+			}else{
+				System.err.println("Field: " + fe + ", is not static!");
+			}
+		}
 	}
 	
-	private static void check() throws IllegalAccessException
+	private static void updateValue(Field fe, Object t){
+		values.put(fe, gson1.toJson(t));
+	}
+	
+	private static void check()
 	{
 		for(Field fe : objects){
 			if(values.containsKey(fe)){
-				Object t = getValue(fe);
+				Object t = gson1.toJson(getValue(fe));
 				Object tg = values.get(fe);
 				
 				if (t != null && !Objects.equals(t, tg) && !t.equals(tg)) {
-					if(!gson1.toJson(t).equals(gson1.toJson(tg))) {
-						differentValue(fe, t);
-					}
+					differentValue(fe, getValue(fe));
 				}
 			}
 		}
@@ -121,79 +136,170 @@ public class DataHandler
 			
 			executor.schedule(() -> {
 				toSave.remove(fe);
-				
-				try {
-					save(fe);
-				} catch (IllegalAccessException e) {
-					DiscordBotBase.handleException(e);
-				}
+				save(fe);
 			}, 1000, TimeUnit.MILLISECONDS);
 		}
 	}
 	
 	
-	private static void load(Field fe) throws IOException, IllegalAccessException
+	private static void load(Field fe)
 	{
-		if(fe.isAnnotationPresent(DataObject.class)){
-			DataObject ob = fe.getAnnotation(DataObject.class);
-			
-			File fes = FileGetter.getFile((ob.use_prefix() ? prefix + "/" : "") + ob.file_path());
-			
-			JsonElement el = gson.fromJson(FileIOUtils.read(fes.toPath()), JsonElement.class);
-			String key = !ob.name().isEmpty() ? ob.name() : fe.getDeclaringClass().getName() + "|" + fe.getName();
-			
-			if(el != null) {
-				JsonObject obs = el.getAsJsonObject();
-				if (obs.has(key)) {
-					JsonElement t1 = obs.get(key);
-					Object tg = gson.fromJson(t1, fe.getGenericType());
-					
-					setValue(fe, tg);
-					updateValue(fe, tg);
-					
-					notifyDataLoad(fe);
+		try {
+			if (fe.isAnnotationPresent(DataObject.class)) {
+				DataObject ob = fe.getAnnotation(DataObject.class);
+				
+				File fes = FileGetter.getFile((ob.use_prefix() ? prefix + "/" : "") + ob.file_path());
+				
+				JsonElement el = gson.fromJson(FileIOUtils.read(fes.toPath()), JsonElement.class);
+				String key = !ob.name().isEmpty() ? ob.name() : fe.getDeclaringClass().getName() + "|" + fe.getName();
+				
+				
+				if (el != null) {
+					JsonObject obs = el.getAsJsonObject();
+					if (obs.has(key)) {
+						JsonElement t1 = obs.get(key);
+						Object tg = gson.fromJson(t1, fe.getGenericType());
+						
+						setValue(fe, tg);
+						updateValue(fe, tg);
+						
+						notifyDataLoad(fe);
+					}
+				} else {
+					save(fe);
 				}
 			}
+		}catch (IOException e){
+			DiscordBotBase.handleException(e);
 		}
 	}
 	
-	private static void notifyDataLoad( Field fe ) throws IllegalAccessException
+	private static void loadClass(Class fe)
 	{
-		for (Method method : fe.getDeclaringClass().getMethods()) {
-			if (method.isAnnotationPresent(DataLoad.class)) {
-				Class[] tt = method.getParameterTypes();
+		try {
+			if (fe.isAnnotationPresent(DataObject.class)) {
+				DataObject ob = (DataObject) fe.getAnnotation(DataObject.class);
 				
-				if (tt != null && tt.length == 1) {
-					if (tt[ 0 ] == Field.class) {
-						try {
-							method.invoke(fe, fe);
-						} catch (InvocationTargetException e) {
-							DiscordBotBase.handleException(e);
+				File fes = FileGetter.getFile((ob.use_prefix() ? prefix + "/" : "") + ob.file_path());
+				
+				JsonElement el = gson.fromJson(FileIOUtils.read(fes.toPath()), JsonElement.class);
+				String key = !ob.name().isEmpty() ? ob.name() : fe.getDeclaringClass().getName() + "|" + fe.getName();
+				
+				
+				if (el != null) {
+					JsonObject obs = el.getAsJsonObject();
+					
+					if (obs.has(key)) {
+						JsonElement t1 = obs.get(key);
+						Map<String, Object> tg = gson.fromJson(t1, new TypeToken<Map<String, Object>>(){}.getType());
+						
+						for(Field fe1 : fe.getFields()){
+							if(tg.containsKey(fe1.getName())){
+								Object fg = gson1.fromJson(gson1.toJson(tg.get(fe1.getName())), fe1.getGenericType());
+								
+								setValue(fe1, fg);
+								updateValue(fe1, fg);
+
+								notifyDataLoad(fe1);
+							}else{
+								save(fe1);
+							}
+						}
+						
+					}else {
+						for(Field fe1 : fe.getFields()){
+							save(fe1);
 						}
 					}
-				}else if(tt.length <= 0){
-					try {
-						method.invoke(fe);
-					} catch (InvocationTargetException e) {
-						DiscordBotBase.handleException(e);
+				}else {
+					for(Field fe1 : fe.getFields()){
+						save(fe1);
 					}
 				}
 			}
+		}catch (IOException e){
+			DiscordBotBase.handleException(e);
 		}
 	}
 	
-	private static void save(Field fe) throws IllegalAccessException
+	private static CopyOnWriteArrayList<Field> queueDataLoad = new CopyOnWriteArrayList<>();
+	
+	private static void notifyDataLoad( Field fe )
+	{
+		try {
+			for (Method method : fe.getDeclaringClass().getMethods()) {
+				if (method.isAnnotationPresent(DataLoad.class)) {
+					
+					if(!Modifier.isStatic(method.getModifiers())) {
+						System.err.println("Method: " + method + ", is not static!");
+						continue;
+					}
+					
+					Class[] tt = method.getParameterTypes();
+					
+					if(!method.isAccessible()){
+						method.setAccessible(true);
+					}
+					
+					DataLoad data = method.getAnnotation(DataLoad.class);
+					
+					if (data.require_discord()) {
+						if (DiscordBotBase.discordClient == null || !DiscordBotBase.discordClient.isReady()) {
+							if (!queueDataLoad.contains(fe)) {
+								queueDataLoad.add(fe);
+							}
+							
+							return;
+						}
+					}
+					
+					if (tt != null && tt.length == 1) {
+						if (tt[ 0 ] == Field.class) {
+							method.invoke(null, fe);
+						}
+					} else if (tt.length <= 0) {
+						method.invoke(null);
+					}
+				}
+			}
+		} catch (Exception e) {
+			DiscordBotBase.handleException(e);
+		}
+	}
+	
+	private static void save(Field fe)
 	{
 		HashMap<String, Object> saveData = new HashMap<>();
-		
 		ArrayList<Field> obs = new ArrayList<>();
-		DataObject ob = fe.getAnnotation(DataObject.class);
-		String key = !ob.name().isEmpty() ? ob.name() : fe.getDeclaringClass().getName() + "|" + fe.getName();
 		
+		DataObject ob = null;
+		
+		boolean clas = fe.getDeclaringClass() != null && fe.getDeclaringClass().isAnnotationPresent(DataObject.class);
+		
+		if(clas){
+			ob = fe.getDeclaringClass().getAnnotation(DataObject.class);
+			
+		}else if(fe.isAnnotationPresent(DataObject.class)){
+			ob = fe.getAnnotation(DataObject.class);
+		}
+		
+		if(ob == null) return;
+		
+		String key = !ob.name().isEmpty() ? ob.name() : fe.getDeclaringClass().getName() + "|" + fe.getName();
 		File fes = FileGetter.getFile((ob.use_prefix() ? prefix + "/" : "") + ob.file_path());
 		obs.add(fe);
 		
-		saveData.put(key, values.containsValue(fe) ? values.get(fe) : getValue(fe));
+		if(clas){
+			HashMap<String, Object> values = new HashMap<>();
+			
+			for(Field fe1 : fe.getDeclaringClass().getFields()){
+				values.put(fe1.getName(), values.containsValue(fe1) ? values.get(fe1) : getValue(fe1));
+			}
+			
+			saveData.put(key, values);
+		}else {
+			saveData.put(key, values.containsValue(fe) ? values.get(fe) : getValue(fe));
+		}
 		
 		for(Field field : objects){
 			if(field.isAnnotationPresent(DataObject.class)){
@@ -214,45 +320,58 @@ public class DataHandler
 		}
 	}
 	
-	private static Object getValue(Field field) throws IllegalAccessException
+	private static Object getValue(Field field)
 	{
-		if(Modifier.isStatic(field.getModifiers())) {
-			if(!field.isAccessible()){
-				field.setAccessible(true);
-			}
-			
-			if(fieldClasses.containsKey(field)){
-				return field.get(fieldClasses.get(field));
-			}else {
-				Class t = field.getDeclaringClass();
-				fieldClasses.put(field, t);
+		try {
+			if(Modifier.isStatic(field.getModifiers())) {
+				if(!field.isAccessible()){
+					field.setAccessible(true);
+				}
 				
-				return field.get(t);
+				if(fieldClasses.containsKey(field)){
+					
+						return field.get(fieldClasses.get(field));
+				}else {
+					Class t = field.getDeclaringClass();
+					fieldClasses.put(field, t);
+					
+					return field.get(t);
+				}
+			}else{
+				System.err.println("Field: " + field + ", is not static!");
 			}
+		} catch (IllegalAccessException e) {
+			DiscordBotBase.handleException(e);
 		}
 		
 		return null;
 	}
 	
-	private static void setValue(Field field, Object value) throws IllegalAccessException
+	private static void setValue(Field field, Object value)
 	{
-		if(Modifier.isStatic(field.getModifiers())) {
-			if(!field.isAccessible()){
-				field.setAccessible(true);
+		try {
+			if(Modifier.isStatic(field.getModifiers())) {
+				if(!field.isAccessible()){
+					field.setAccessible(true);
+				}
+				
+				Class t;
+				
+				if(fieldClasses.containsKey(field)){
+					t = fieldClasses.get(field);
+				}else {
+					t = field.getDeclaringClass();
+					fieldClasses.put(field, t);
+				}
+				
+				if(t != null){
+					field.set(t, value);
+				}
+			}else{
+				System.err.println("Field: " + field + ", is not static!");
 			}
-			
-			Class t = null;
-			
-			if(fieldClasses.containsKey(field)){
-				t = fieldClasses.get(field);
-			}else {
-				t = field.getDeclaringClass();
-				fieldClasses.put(field, t);
-			}
-			
-			if(t != null){
-				field.set(t, value);
-			}
+		} catch (IllegalAccessException e) {
+			DiscordBotBase.handleException(e);
 		}
 	}
 }

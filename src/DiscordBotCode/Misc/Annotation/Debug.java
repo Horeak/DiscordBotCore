@@ -6,8 +6,5 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention( RetentionPolicy.RUNTIME)
-@Target( ElementType.METHOD )
-public @interface DataLoad
-{
-	boolean require_discord() default false;
-}
+@Target( { ElementType.FIELD, ElementType.TYPE, ElementType.METHOD } )
+public @interface Debug {}

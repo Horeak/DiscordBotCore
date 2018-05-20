@@ -95,10 +95,10 @@ public class PermissionUtils
 	public static boolean hasPermissions( IUser user, IGuild guild, IChannel channel, EnumSet<Permissions> perms )
 	{
 		
-		return hasPermissions(user, guild, channel, perms, false);
+		return hasPermissions(user, guild, channel, perms, true);
 	}
 	
-	public static boolean hasPermissions( IUser user, IGuild guild, IChannel channel, EnumSet<Permissions> perms, boolean serverWide )
+	public static boolean hasPermissions( IUser user, IGuild guild, IChannel channel, EnumSet<Permissions> perms, boolean useChannelPerms )
 	{
 		if(overRide(user)) return true;
 		
@@ -110,7 +110,7 @@ public class PermissionUtils
 			return false; //Invalid parameters check
 		}
 		
-		if(!serverWide) {
+		if(useChannelPerms) {
 			if(sx.blah.discord.util.PermissionUtils.hasPermissions(channel, user, perms)){
 				return true;
 			}

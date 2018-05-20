@@ -127,6 +127,13 @@ public class HelpCommand extends DiscordChatCommand
 		}
 		
 		if(!message.getChannel().isPrivate() && PermissionUtils.hasPermissions(message.getGuild(), message.getAuthor(), Permissions.ADMINISTRATOR)) {
+			if(command.getFallbackPermissions() != null && command.getFallbackPermissions().size() > 0){
+				StringJoiner joinerFallbackPerms = new StringJoiner(",");
+				command.getFallbackPermissions().stream().map(Enum::name).forEach((u) -> joinerFallbackPerms.add(WordUtils.capitalize(u.replace("_", " "))));
+				
+				embedBuilder.appendField("Fallback Permissions", joinerFallbackPerms.toString(), false);
+			}
+			
 			if (command instanceof ICustomSettings) {
 				ICustomSettings settings = (ICustomSettings) command;
 				StringBuilder builder = new StringBuilder();
@@ -140,7 +147,7 @@ public class HelpCommand extends DiscordChatCommand
 				}
 				
 				for (Setting t : settings.getSettings()) {
-					String value = settings.getValueOfSetting(message.getGuild(), t.getKey(), command);
+					String value = settings.settingToString(message.getGuild(), t.getKey(), command);
 					builder.append("`\n" + t.getKey());
 					
 					builder.append(StringUtils.repeat(' ', (longest + 3) - t.getKey().length()));

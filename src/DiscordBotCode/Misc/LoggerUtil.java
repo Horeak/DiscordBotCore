@@ -3,7 +3,6 @@ package DiscordBotCode.Misc;
 import DiscordBotCode.Extra.FileGetter;
 import DiscordBotCode.Extra.FileUtil;
 import DiscordBotCode.Main.DiscordBotBase;
-import sx.blah.discord.util.DiscordException;
 
 import java.io.File;
 import java.io.OutputStream;
@@ -62,7 +61,7 @@ public class LoggerUtil
 		FileUtil.addLineToFile(file, text);
 	}
 	
-	public static void exception( Exception e )
+	public static void exception( Throwable e )
 	{
 		if (LoggerUtil.ERROR_LOGS && DiscordBotBase.FilePath != null) {
 			Date today = new Date();
@@ -76,59 +75,37 @@ public class LoggerUtil
 			File file = FileGetter.getFile(DiscordBotBase.FilePath + "/errorLogs/" + formatter.format(today) + ".log");
 			FileUtil.addLineToFile(file, prefix + e.getClass().getName() + ": " + e.getMessage());
 			
-			System.err.println(e.getClass().getName() + ": " + e.getMessage());
+			String preFix = getPrefix(Level.SEVERE, System.currentTimeMillis());
+			StringBuilder builder = new StringBuilder();
+			
+			builder.append(e.getClass().getName() + ": " + e.getMessage() + "\n");
 			
 			for (StackTraceElement g : e.getStackTrace()) {
 				FileUtil.addLineToFile(file, prefix + "\t at " + g);
-				System.err.println("\t at " + g);
+				builder.append(preFix + "\t at " + g.toString() + "\n");
 			}
 			
+			System.err.println(builder.toString());
 			FileUtil.addLineToFile(file, "");
 		}
 	}
 	
-	public static void reportIssue( Exception e )
+	protected static String getPrefix(Level level, Long time)
 	{
-		if(e instanceof InterruptedException || (e instanceof DiscordException && e.getMessage().contains("Message was unable to be sent"))){
-			return;
-		}
+		StringBuilder preFix = new StringBuilder();
 		
-//		IssueObject object = new IssueBuilder().genId().withException(e).withCurrentDate().build();
-		
-		//TODO Renable when remade
-//		if(!IssueHandler.issueExists(object)){
-//			IssueHandler.createIssue(object);
-//		}else{
-//			IssueHandler.addIssue(object);
-//		}
-	}
-}
-
-class CustomFormatter extends Formatter
-{
-	public String format( LogRecord record )
-	{
-		StringBuilder builder = new StringBuilder(1000);
-		builder.append("[").append(LoggerUtil.df.format(new Date(record.getMillis()))).append("]").append(" - ");
-		
-		if(record.getMessage() == null || record.getMessage().isEmpty() || record.getMessage().equalsIgnoreCase("\n")){
-			return "";
-		}
-		
-		if(record.getMessage().contains("WARN twitter4j.StatusStreamImpl")){
-			return builder.toString() + " Unhandled twitter event!";
-		}
+		preFix.append("[").append(LoggerUtil.df.format(new Date(time))).append("]").append(" - ");
 		
 		if (DiscordBotBase.debug) {
-			builder.append("[").append(record.getLevel()).append("] - ");
-			builder.append("[").append(Thread.currentThread().getName()).append(":").append(Thread.currentThread().getId()).append("] - ");
+			preFix.append("[").append(level).append("] - ");
+			preFix.append("[").append(Thread.currentThread().getName()).append(":").append(Thread.currentThread().getId()).append("] - ");
 			
 			
 			StackTraceElement[] stacks = Thread.currentThread().getStackTrace();
 			for (StackTraceElement stack : stacks) {
 				String className = stack.getClassName();
 				
-				if (stack.getClassName().startsWith(getClass().getPackage().getName())
+				if (stack.getClassName().startsWith(LoggerUtil.class.getPackage().getName())
 				    || stack.getClassName().startsWith("sx.blah.discord")
 				    || stack.isNativeMethod()
 				    || className.startsWith("java")
@@ -140,17 +117,38 @@ class CustomFormatter extends Formatter
 				}
 				
 				
-				builder.append("[").append(stack.getFileName()).append("][").append(stack.getMethodName()).append(":").append(stack.getLineNumber()).append("] - ");
+				preFix.append("[").append(stack.getFileName()).append("][").append(stack.getMethodName()).append(":").append(stack.getLineNumber()).append("] - ");
 				break;
 			}
 		}
+		return preFix.toString();
+	}
+}
+
+class CustomFormatter extends Formatter
+{
+	public String format( LogRecord record )
+	{
+		String prefix = LoggerUtil.getPrefix(record.getLevel(), record.getMillis());
 		
+		if(record.getMessage() == null || record.getMessage().isEmpty() || record.getMessage().equalsIgnoreCase("\n")){
+			return "";
+		}
 		
+		if(record.getMessage().contains("WARN twitter4j.StatusStreamImpl")){
+			return prefix + " Unhandled twitter event!";
+		}
+		
+		StringBuilder builder = new StringBuilder();
+		
+		builder.append(prefix);
 		builder.append(formatMessage(record));
 		
 		if(!record.getMessage().isEmpty()) {
-			if (record.getMessage() == null || !record.getMessage().endsWith("\n")) {
-				builder.append("\n");
+			if (record.getMessage() == null || !record.getMessage().contains("\n")) {
+//				if(record.getLevel() != Level.SEVERE || !record.getMessage().contains("\tat ")) {
+					builder.append("\n");
+//				}
 			}
 		}
 		

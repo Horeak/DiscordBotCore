@@ -13,6 +13,7 @@ import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IRole;
 
 import java.util.ArrayList;
+import java.util.StringJoiner;
 
 @DiscordCommand
 public class AssignRoleCommand extends DiscordChatCommand
@@ -104,7 +105,7 @@ public class AssignRoleCommand extends DiscordChatCommand
 		boolean found = false;
 		boolean deleted = false;
 		
-		StringBuilder builder = new StringBuilder(", ");
+		StringJoiner builder = new StringJoiner(", ");
 		
 		for(CommandBase dc : commands){
 			String key = CommandUtils.getKeyFromCommand(dc);
@@ -119,7 +120,7 @@ public class AssignRoleCommand extends DiscordChatCommand
 			if(role != null){
 				ServerSettings.setValue(message.getGuild(), key, role.getStringID());
 				found = true;
-				builder.append(dc.commandPrefix());
+				builder.add(dc.commandPrefix());
 			}
 		}
 		

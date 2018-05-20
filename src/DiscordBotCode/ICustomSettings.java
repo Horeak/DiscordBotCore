@@ -12,7 +12,7 @@ public interface ICustomSettings {
 	
 	boolean canUpdateSetting( IMessage message, String[] args);
 	
-	default String getValueOfSetting( IGuild guild, String settingKey, CommandBase command ){
+	default String settingToString( IGuild guild, String settingKey, CommandBase command ){
 		for(Setting set : getSettings()) {
 			if(set.getKey().equalsIgnoreCase(settingKey)) {
 				Object t = getSettingValue(guild, set, command);

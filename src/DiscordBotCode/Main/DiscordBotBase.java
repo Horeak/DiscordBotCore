@@ -11,9 +11,11 @@ import DiscordBotCode.Main.CommandHandeling.Formatters.CommandDataFormat;
 import DiscordBotCode.Main.CommandHandeling.Formatters.IgnoredMessageFormat;
 import DiscordBotCode.Main.CommandHandeling.Formatters.MentionsMessageFormat;
 import DiscordBotCode.Main.CustomEvents.BotCloseEvent;
+import DiscordBotCode.Misc.Annotation.DataObject;
 import DiscordBotCode.Misc.Annotation.DiscordCommand;
 import DiscordBotCode.Misc.Annotation.EventListener;
 import DiscordBotCode.Misc.Annotation.SubCommand;
+import DiscordBotCode.Misc.Config.CstReflections;
 import DiscordBotCode.Misc.Config.DataHandler;
 import DiscordBotCode.Misc.LoggerUtil;
 import org.apache.commons.io.FileUtils;
@@ -81,8 +83,10 @@ public class DiscordBotBase
 	
 	private static ArrayList<BotLauncher> launchers = new ArrayList<>();
 	
-	private static Reflections annoReflection;
+	private static CstReflections annoReflection;
 	
+	@DataObject(file_path = "confirmation.json", name = "run_confirmation")
+	private static boolean confirmation = false;
 	
 	public static void main(String[] args)
 	{
@@ -99,14 +103,18 @@ public class DiscordBotBase
 		System.out.println("modules: " + modules);
 		
 		Reflections.log = null;
-		annoReflection = new Reflections("", new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new MethodAnnotationsScanner(), new SubTypesScanner());
+		annoReflection = new CstReflections("", new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new MethodAnnotationsScanner(), new SubTypesScanner());
 		
 		try {
 			initFile();
 			initVersion();
+			
+			checkConfirmation();
+			
 			initBot();
-
 			initSubBot();
+			
+			initReconnectionThread();
 		}catch (Exception e){
 			handleException(e);
 		}
@@ -157,6 +165,26 @@ public class DiscordBotBase
 		System.out.println("Version init done.");
 	}
 	
+	//A system to make sure bot isnt copied without files or atleast requires the user to know about this feature to start the bot
+	private static void checkConfirmation(){
+		if(debug) return;
+		
+		while(!DataHandler.load_done){
+			try {
+				Thread.sleep(1);
+			} catch (InterruptedException e) {
+				DiscordBotBase.handleException(e);
+			}
+		}
+		
+		if(!confirmation){
+			System.err.println("Unable to start, confirmation has not been given!");
+			System.exit(0);
+		}
+		
+		System.out.println("Confirmation has been given!");
+	}
+	
 	private static void initBot(){
 		if(!modules) Configuration.LOAD_EXTERNAL_MODULES = false;
 		
@@ -184,7 +212,7 @@ public class DiscordBotBase
 		try {
 			String launcher_class = FileUtil.getValue(INFO_FILE_TAG, "launcher_class");
 			
-			Reflections reflections = new Reflections(launcher_class);
+			CstReflections reflections = new CstReflections(launcher_class);
 			Set<Class<? extends BotLauncher>> classes = reflections.getSubTypesOf(BotLauncher.class);
 			
 			System.out.println("Found " + classes.size() + " bot launcher class" + (classes.size() > 1 ? "es" : "") + "!");
@@ -201,6 +229,21 @@ public class DiscordBotBase
 				DiscordBotBase.handleException(e);
 			}
 		}
+	}
+	
+	private static void initReconnectionThread(){
+		new Thread(() -> {
+			try {
+				Thread.sleep(TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES));
+			} catch (InterruptedException e) {
+				DiscordBotBase.handleException(e);
+			}
+			
+			if(DiscordBotBase.discordClient == null || !discordClient.isReady() || !discordClient.isLoggedIn()){
+				reconnectBot();
+			}
+			
+		}).start();
 	}
 	
 	private void startup(){
@@ -239,6 +282,10 @@ public class DiscordBotBase
 			for(Method method : listeners){
 				if(!Modifier.isStatic(method.getModifiers())) continue;
 				
+				if(!method.isAccessible()){
+					method.setAccessible(true);
+				}
+				
 				Class[] cc = method.getParameterTypes();
 				
 				if(cc != null && cc.length == 1){
@@ -261,7 +308,10 @@ public class DiscordBotBase
 					} catch (IllegalAccessException | InvocationTargetException e1) {
 						if(e1 instanceof InvocationTargetException){
 							InvocationTargetException e2 = (InvocationTargetException)e1;
-							DiscordBotBase.handleException(new Exception(e2.getCause()));
+							
+							if(e2 != null && e2.getCause() != null) {
+								DiscordBotBase.handleException(e2.getCause());
+							}
 						}else {
 							DiscordBotBase.handleException(e1);
 						}
@@ -282,14 +332,10 @@ public class DiscordBotBase
 		ArrayList<DiscordChatCommand> commandX = new ArrayList<>();
 		
 		for(Class c : commands1){
-			DiscordCommand co = (DiscordCommand) c.getAnnotation(DiscordCommand.class);
+			DiscordChatCommand cc = CommandUtils.registerCommand(c, WordUtils.uncapitalize(c.getSimpleName()));
 			
-			if(!co.debug() || debug) {
-				DiscordChatCommand cc = CommandUtils.registerCommand(c, WordUtils.uncapitalize(c.getSimpleName()));
-				
-				if (cc != null) {
-					commandX.add(cc);
-				}
+			if (cc != null) {
+				commandX.add(cc);
 			}
 		}
 		
@@ -325,6 +371,10 @@ public class DiscordBotBase
 		return joiner.toString();
 	}
 	
+	public static Reflections getReflection(){
+		return annoReflection;
+	}
+	
 	public static void waitForReady(){
 		Long startup = 0L;
 		
@@ -348,9 +398,8 @@ public class DiscordBotBase
 		discordClient.getDispatcher().registerListener((IListener<GuildCreateEvent>) ( event ) -> LoggerUtil.log("Bot has joined server \"" + event.getGuild().getName() + "\""));
 	}
 	
-	public static void handleException( Exception e )
+	public static void handleException( Throwable e )
 	{
-		LoggerUtil.reportIssue(e);
 		LoggerUtil.exception(e);
 	}
 	

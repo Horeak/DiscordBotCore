@@ -8,6 +8,8 @@ import java.util.EnumSet;
 
 public abstract class CommandBase
 {
+	//TODO Add a fallback permission incase a role is not assigned
+	
 	public String[] commandPrefixes(){
 		return new String[]{commandPrefix()};
 	}
@@ -27,6 +29,7 @@ public abstract class CommandBase
 
 	public EnumSet<Permissions> getPermissionsEnumSet() { return permissionsEnumSet; }
 	protected Permissions[] getRequiredPermissions(){ return null; }
+	public EnumSet<Permissions> getFallbackPermissions() { return null;}
 
 
 	public abstract String commandPrefix();
@@ -49,7 +52,7 @@ public abstract class CommandBase
 	//This makes it where a command can be marked where it requires the serverwide permission and not the channel specific one
 	public boolean useChannelPermission()
 	{
-		return false;
+		return true;
 	}
 	
 	//Check if user has permission to use command
@@ -63,7 +66,12 @@ public abstract class CommandBase
 		
 		if(PermissionUtils.getRequiredRole(this, message.getChannel()) != null) {
 			return message.getChannel().isPrivate() || PermissionUtils.hasRole(message.getAuthor(), message.getGuild(), PermissionUtils.getRequiredRole(this, message.getChannel()), true);
-			
+		}
+		
+		if(getFallbackPermissions() != null) {
+			if (permissionsEnumSet == null || permissionsEnumSet.size() <= 0) {
+				return PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), getFallbackPermissions(), useChannelPermission());
+			}
 		}
 		
 		return PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), permissionsEnumSet, useChannelPermission());
