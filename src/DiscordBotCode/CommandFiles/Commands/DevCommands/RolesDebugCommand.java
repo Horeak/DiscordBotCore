@@ -1,15 +1,16 @@
 package DiscordBotCode.CommandFiles.Commands.DevCommands;
 
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.DeveloperSystem.DevCommandBase;
 import DiscordBotCode.Main.ChatUtils;
-import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Misc.Annotation.Command;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IRole;
 import sx.blah.discord.util.RequestBuffer;
 
 import java.util.ArrayList;
 
-@DiscordCommand
+@Command
 public class RolesDebugCommand extends DevCommandBase
 {
 	@Override
@@ -17,6 +18,13 @@ public class RolesDebugCommand extends DevCommandBase
 	{
 		return "roles";
 	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Lists all role ids";
+	}
+	
 	
 	@Override
 	public void commandExecuted( IMessage message, String[] args )

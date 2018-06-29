@@ -2,6 +2,7 @@ package DiscordBotCode.Main.CommandHandeling.Formatters;
 
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.CommandHandeling.ICommandFormatter;
+import DiscordBotCode.Misc.Annotation.CommandFormatter;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IRole;
@@ -12,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@CommandFormatter
 public class IgnoredMessageFormat implements ICommandFormatter
 {
 	@Override

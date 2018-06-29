@@ -1,22 +1,33 @@
 package DiscordBotCode.CommandFiles.Commands;
 
-import DiscordBotCode.CommandFiles.CommandBase;
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
-import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Main.PermissionUtils;
+import DiscordBotCode.Misc.Annotation.Command;
+import org.apache.commons.lang.WordUtils;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-@DiscordCommand
-public class ListCommandsCommand extends DiscordChatCommand
+@Command
+public class ListCommandsCommand extends DiscordCommand
 {
 	
 	//TODO Add a option to show commands avaliable for a specific role
+	
+	@Override
+	public String getCategory()
+	{
+		return "info commands";
+	}
 	
 	@Override
 	public void commandExecuted( IMessage message, String[] args )
@@ -24,75 +35,113 @@ public class ListCommandsCommand extends DiscordChatCommand
 		int length = 0;
 		int fieldCount = 0;
 		
-		String starter = "```markdown\n";
+		String arg = String.join(" ", args);
+		
+		ConcurrentHashMap<String, CopyOnWriteArrayList<DiscordCommand>> commands = new ConcurrentHashMap<>();
+		
+		for (Map.Entry<String, DiscordCommand> ent : CommandUtils.discordChatCommands.entrySet()) {
+			String category = CommandUtils.getCommandCategory(ent.getValue());
+			String key = category != null ? category : "Default Commands";
+			key = WordUtils.capitalize(key);
+			
+			if(!commands.containsKey(key)){
+				commands.put(key, new CopyOnWriteArrayList<>());
+			}
+			
+			commands.get(key).add(ent.getValue());
+		}
 		
 		ArrayList<EmbedBuilder> builderArrayList = new ArrayList<>();
 		builderArrayList.add(new EmbedBuilder());
-		builderArrayList.get(0).withColor(message.getChannel().isPrivate() ? Color.yellow : message.getAuthor().getColorForGuild(message.getGuild()));
+		builderArrayList.get(0).withColor(message.getChannel().isPrivate() ? Color.darkGray : message.getAuthor().getColorForGuild(message.getGuild()));
 		
 		int num = 0;
 		
-		for (Map.Entry<String, DiscordChatCommand> ent : CommandUtils.discordChatCommands.entrySet()) {
-			DiscordChatCommand command = ent.getValue();
+		for (Map.Entry<String, CopyOnWriteArrayList<DiscordCommand>> ent : commands.entrySet()) {
+			ArrayList<StringBuilder> builders = new ArrayList<>();
 			
-			if (!message.getChannel().isPrivate() || command.commandPrivateChat()) {
-				if (command.isCommandVisible()) {
-					if (command.hasPermissions(message, new String[]{}) && (!message.getChannel().isPrivate() || command.commandPrivateChat())) {
-						String title = getCommandSign(message.getChannel()) + command.commandPrefix() + "\n";
-						String usage = command.getUsage(this, message);
-						String description = command.getDescription(this, message);
-						String text = "";
-						
-						if (usage != null) {
-							usage = getCommandSign(message.getChannel()) + usage;
-						}
-						
-						if(description != null) text += "> " + command.getDescription(this, message) + "\n\n";
-						if(usage != null) text += "* Usage: " + usage + "\n";
-						if(command.commandPrefixes().length > 1) text += "* Prefixes: " + String.join(", ", command.commandPrefixes()) + "\n";
-						
-						if(title.length() > EmbedBuilder.TITLE_LENGTH_LIMIT){
-							title = title.substring(0, EmbedBuilder.TITLE_LENGTH_LIMIT - 4) + "...";
-						}
-						
-						if(text.length() > EmbedBuilder.FIELD_CONTENT_LIMIT){
-							text = text.substring(0, EmbedBuilder.FIELD_CONTENT_LIMIT - 4) + "...";
-						}
-						
-						length += (title.length() + text.length());
-						
-						if (length >= EmbedBuilder.MAX_CHAR_LIMIT || (fieldCount + 1) >= EmbedBuilder.FIELD_COUNT_LIMIT) {
-							num += 1;
+			if(arg != null && !arg.isEmpty()){
+				if(!ent.getKey().equalsIgnoreCase(arg)){
+					continue;
+				}
+			}
+			
+			int cur = 0;
+			builders.add(new StringBuilder());
+			
+			for(DiscordCommand command : ent.getValue()) {
+				if (!message.getChannel().isPrivate() || command.commandPrivateChat()) {
+					if (command.isCommandVisible()) {
+						if (command.hasPermissions(message, new String[]{}) && (!message.getChannel().isPrivate() || command.commandPrivateChat())) {
+							String title = command.getCommandSign(message.getChannel()) + command.commandPrefix();
+							String usage = command.getUsage(this, message);
+							String description = command.getShortDescription(this, message);
+							String text = "";
 							
-							builderArrayList.add(new EmbedBuilder());
-							builderArrayList.get(num).withColor(message.getChannel().isPrivate() ? Color.yellow : message.getAuthor().getColorForGuild(message.getGuild()));
 							
-							length = 0;
-							fieldCount = 0;
+							if(usage != null) {
+								usage = usage.replaceFirst("(?i)" + command.commandPrefix(), "");
+							}
+							
+							if(usage != null) {
+								if (usage.startsWith(" ")) {
+									usage = usage.substring(1);
+								}
+							}
+							
+							
+							text = "``" + title + (usage != null ? " " + usage : "") + "`` | " + (description != null ? description : "No Description");
+							
+							if(!message.getChannel().isPrivate() && message.getGuild() != null) {
+								if (CommandUtils.isCommandDisabled(message.getGuild(), command)){
+									if(PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), EnumSet.of(Permissions.ADMINISTRATOR))) {
+										text = "~~" + text + "~~";
+									}else{
+										continue;
+									}
+								}
+							}
+							
+							if(builders.get(cur).length() + text.length() >= EmbedBuilder.FIELD_CONTENT_LIMIT){
+								builders.add(new StringBuilder());
+								cur += 1;
+							}
+							
+							builders.get(cur).append("\n" + text);
 						}
-						
-						if(text == null || text.isEmpty()){
-							text = "Found no information.";
-						}
-						
-						builderArrayList.get(num).appendField(title, starter + text + "```", false);
-						fieldCount += 1;
 					}
+				}
+			}
+			
+			for(StringBuilder builder : builders){
+				if (length >= EmbedBuilder.MAX_CHAR_LIMIT || (fieldCount + 1) >= EmbedBuilder.FIELD_COUNT_LIMIT) {
+					num += 1;
+
+					builderArrayList.add(new EmbedBuilder());
+					builderArrayList.get(num).withColor(message.getChannel().isPrivate() ? Color.darkGray : message.getAuthor().getColorForGuild(message.getGuild()));
+
+					length = 0;
+					fieldCount = 0;
+				}
+				
+				if(builder.toString() != null && !builder.toString().isEmpty()) {
+					builderArrayList.get(num).appendField("**" + ent.getKey() + "**", builder.toString(), false);
+					fieldCount += 1;
 				}
 			}
 		}
 		
 		for (EmbedBuilder bd : builderArrayList) {
-			ChatUtils.sendMessage(message.getAuthor().getOrCreatePMChannel(), bd.build());
+			ChatUtils.sendMessage(message.getChannel(), bd.build());
 		}
 	}
 
 	@Override
 	public String commandPrefix()
 	{
-		
 		return "commands";
 	}
+	
 	public boolean isCommandVisible()
 	{
 		
@@ -100,9 +149,22 @@ public class ListCommandsCommand extends DiscordChatCommand
 	}
 	
 	@Override
-	public String getDescription( CommandBase sourceCommand, IMessage callerMessage )
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	{
+		return "commands [category]";
+	}
+	
+	@Override
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 	{
 		
 		return "Lists all commands available on the bot";
 	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Lists all commands in the bot";
+	}
+	
 }

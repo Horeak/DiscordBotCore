@@ -3,6 +3,7 @@ package DiscordBotCode.Main.CommandHandeling.Formatters;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.CommandHandeling.ICommandFormatter;
 import DiscordBotCode.Main.Utils;
+import DiscordBotCode.Misc.Annotation.CommandFormatter;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IRole;
 import sx.blah.discord.handle.obj.IUser;
@@ -12,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@CommandFormatter
 public class MentionsMessageFormat implements ICommandFormatter
 {
 	@Override

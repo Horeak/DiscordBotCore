@@ -1,8 +1,7 @@
 package DiscordBotCode;
 
-import DiscordBotCode.CommandFiles.CommandBase;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
-import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.ServerSettings;
 import DiscordBotCode.Main.Utils;
 import sx.blah.discord.handle.obj.*;
@@ -12,7 +11,7 @@ public interface ICustomSettings {
 	
 	boolean canUpdateSetting( IMessage message, String[] args);
 	
-	default String settingToString( IGuild guild, String settingKey, CommandBase command ){
+	default String settingToString( IGuild guild, String settingKey, DiscordCommand command ){
 		for(Setting set : getSettings()) {
 			if(set.getKey().equalsIgnoreCase(settingKey)) {
 				Object t = getSettingValue(guild, set, command);
@@ -43,13 +42,13 @@ public interface ICustomSettings {
 		return null;
 	}
 	
-	default Object getSettingValue(IGuild guild, Setting setting, CommandBase command){
+	default Object getSettingValue(IGuild guild, Setting setting, DiscordCommand command){
 		String t = ServerSettings.getValue(guild, CommandUtils.getKeyFromCommand(command) + "$" + setting.getKey());
 		
 		
 		if(setting.getType() == Setting.SettingType.Role){
 			if (t != null && !t.isEmpty() && Utils.isLong(t)) {
-				IRole role = DiscordBotBase.discordClient.getRoleByID(Long.parseLong(t));
+				IRole role = guild.getClient().getRoleByID(Long.parseLong(t));
 				
 				if (role != null) {
 					return role;
@@ -58,7 +57,7 @@ public interface ICustomSettings {
 			
 		}else if(setting.getType() == Setting.SettingType.Channel){
 			if (t != null && !t.isEmpty() && Utils.isLong(t)) {
-				IChannel channel = DiscordBotBase.discordClient.getChannelByID(Long.parseLong(t));
+				IChannel channel = guild.getClient().getChannelByID(Long.parseLong(t));
 				
 				if (channel != null) {
 					return channel;
@@ -66,7 +65,7 @@ public interface ICustomSettings {
 			}
 		}else if(setting.getType() == Setting.SettingType.User){
 			if (t != null && !t.isEmpty() && Utils.isLong(t)) {
-				IUser user = DiscordBotBase.discordClient.getUserByID(Long.parseLong(t));
+				IUser user = guild.getClient().getUserByID(Long.parseLong(t));
 				
 				if (user != null) {
 					return user;
@@ -86,7 +85,7 @@ public interface ICustomSettings {
 		return setting.getDefValue();
 	}
 	
-	default void updateSetting( IMessage message, String[] args, Setting setting, CommandBase command){
+	default void updateSetting( IMessage message, String[] args, Setting setting, DiscordCommand command){
 		String text = String.join("_", args);
 		
 		if(setting.getType() == Setting.SettingType.Channel){
@@ -99,8 +98,8 @@ public interface ICustomSettings {
 			for(String t : args){
 				if(t != null && !t.isEmpty() && channel == null) {
 					if (Utils.isLong(t)) {
-						if (DiscordBotBase.discordClient.getChannelByID(Long.parseLong(t)) != null) {
-							channel = DiscordBotBase.discordClient.getChannelByID(Long.parseLong(t));
+						if (message.getClient().getChannelByID(Long.parseLong(t)) != null) {
+							channel = message.getClient().getChannelByID(Long.parseLong(t));
 							text = text.replace(t, "");
 						}
 					}
@@ -132,8 +131,8 @@ public interface ICustomSettings {
 			for(String t : args){
 				if(t != null && !t.isEmpty() && role == null) {
 					if (Utils.isLong(t)) {
-						if (DiscordBotBase.discordClient.getRoleByID(Long.parseLong(t)) != null) {
-							role = DiscordBotBase.discordClient.getRoleByID(Long.parseLong(t));
+						if (message.getClient().getRoleByID(Long.parseLong(t)) != null) {
+							role = message.getClient().getRoleByID(Long.parseLong(t));
 							text = text.replace(t, "");
 						}
 					}
@@ -165,8 +164,8 @@ public interface ICustomSettings {
 			for(String t : args){
 				if(t != null && !t.isEmpty() && user == null) {
 					if (Utils.isLong(t)) {
-						if (DiscordBotBase.discordClient.getUserByID(Long.parseLong(t)) != null) {
-							user = DiscordBotBase.discordClient.getUserByID(Long.parseLong(t));
+						if (message.getClient().getUserByID(Long.parseLong(t)) != null) {
+							user = message.getClient().getUserByID(Long.parseLong(t));
 							text = text.replace(t, "");
 						}
 					}

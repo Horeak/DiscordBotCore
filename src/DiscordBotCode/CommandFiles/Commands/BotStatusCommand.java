@@ -1,22 +1,34 @@
 package DiscordBotCode.CommandFiles.Commands;
 
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.Extra.TimeUtil;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.Utils;
-import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Misc.Annotation.Command;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 
 import java.awt.*;
 
-@DiscordCommand
-public class BotStatusCommand extends DiscordChatCommand
+@Command
+public class BotStatusCommand extends DiscordCommand
 {
 	@Override
 	public String commandPrefix() {
 		return "botinfo";
+	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Shows the status of the bot";
+	}
+	
+	@Override
+	public String getCategory()
+	{
+		return "info commands";
 	}
 	
 	@Override

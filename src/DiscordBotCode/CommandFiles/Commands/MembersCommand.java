@@ -1,25 +1,36 @@
 package DiscordBotCode.CommandFiles.Commands;
 
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.CommandBase;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.Main.ChatUtils;
-import DiscordBotCode.Main.DiscordBotBase;
-import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Misc.Annotation.Command;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.handle.obj.StatusType;
 import sx.blah.discord.util.EmbedBuilder;
 
-@DiscordCommand
-public class MembersCommand extends DiscordChatCommand {
+@Command
+public class MembersCommand extends DiscordCommand
+{
 	@Override
-	public String getDescription( CommandBase sourceCommand, IMessage callerMessage ) {
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage ) {
 		return "Shows current status of members in the server by showing total amount of users and online/offline count";
+	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Shows online member count";
 	}
 	
 	@Override
 	public String commandPrefix() {
 		return "members";
+	}
+	
+	@Override
+	public String getCategory()
+	{
+		return "info commands";
 	}
 	
 	@Override
@@ -41,8 +52,8 @@ public class MembersCommand extends DiscordChatCommand {
 		
 		float per = (float)number / (float)members;
 		
-		builder.withAuthorIcon(DiscordBotBase.discordClient.getOurUser().getAvatarURL());
-		builder.withAuthorName(DiscordBotBase.discordClient.getOurUser().getDisplayName(message.getGuild()));
+		builder.withAuthorIcon(message.getClient().getOurUser().getAvatarURL());
+		builder.withAuthorName(message.getClient().getOurUser().getDisplayName(message.getGuild()));
 		
 		builder.withTimestamp(System.currentTimeMillis());
 		builder.withFooterText((int)(per * 100) + "% Online");
@@ -52,7 +63,6 @@ public class MembersCommand extends DiscordChatCommand {
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention(), builder.build());
 	}
 	
-
 	
 	@Override
 	public boolean commandPrivateChat() {

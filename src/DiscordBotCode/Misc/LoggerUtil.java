@@ -17,6 +17,7 @@ public class LoggerUtil
 	static final DateFormat df = new SimpleDateFormat("dd/LLL/yyyy-HH:mm(zzz)");
 	public static Logger out;
 	public static boolean ERROR_LOGS = true;
+	public static boolean timeStamps = true;
 	
 	public static void activate()
 	{
@@ -51,15 +52,16 @@ public class LoggerUtil
 	
 	public static void logInfo( String text, String folder)
 	{
-		if(DiscordBotBase.FilePath == null) return;
+		if(DiscordBotBase.baseFilePath == null) return;
 		
 		if(text == null || text.isEmpty() || text.equalsIgnoreCase("\n")){
 			return;
 		}
 		
-		File file = FileGetter.getFile(DiscordBotBase.FilePath + "/" + folder + "/" + "log_" + "(" + formatter.format(new Date()) + ").log");
+		File file = FileGetter.getFile(DiscordBotBase.baseFilePath + "/" + folder + "/" + "log_" + "(" + formatter.format(new Date()) + ").log");
 		FileUtil.addLineToFile(file, text);
 	}
+	
 	
 	public static void exception( Throwable e )
 	{
@@ -71,12 +73,15 @@ public class LoggerUtil
 			
 			String prefix = timePrefix + botVersionPrefix;
 			
-			
 			File file = FileGetter.getFile(DiscordBotBase.FilePath + "/errorLogs/" + formatter.format(today) + ".log");
 			FileUtil.addLineToFile(file, prefix + e.getClass().getName() + ": " + e.getMessage());
 			
 			String preFix = getPrefix(Level.SEVERE, System.currentTimeMillis());
 			StringBuilder builder = new StringBuilder();
+			
+			if(!DiscordBotBase.debug){
+				preFix = "";
+			}
 			
 			builder.append(e.getClass().getName() + ": " + e.getMessage() + "\n");
 			
@@ -90,11 +95,14 @@ public class LoggerUtil
 		}
 	}
 	
+	
 	protected static String getPrefix(Level level, Long time)
 	{
 		StringBuilder preFix = new StringBuilder();
 		
-		preFix.append("[").append(LoggerUtil.df.format(new Date(time))).append("]").append(" - ");
+		if(timeStamps){
+			preFix.append("[").append(LoggerUtil.df.format(new Date(time))).append("]").append(" - ");
+		}
 		
 		if (DiscordBotBase.debug) {
 			preFix.append("[").append(level).append("] - ");
@@ -121,6 +129,7 @@ public class LoggerUtil
 				break;
 			}
 		}
+		
 		return preFix.toString();
 	}
 }
@@ -146,9 +155,7 @@ class CustomFormatter extends Formatter
 		
 		if(!record.getMessage().isEmpty()) {
 			if (record.getMessage() == null || !record.getMessage().contains("\n")) {
-//				if(record.getLevel() != Level.SEVERE || !record.getMessage().contains("\tat ")) {
-					builder.append("\n");
-//				}
+				builder.append("\n");
 			}
 		}
 		
@@ -209,8 +216,6 @@ class CustomPrintStream extends PrintStream
 	{
 		print(s);
 	}
-	
-	
 }
 
 class CustomErrorPrintstream extends PrintStream

@@ -1,7 +1,7 @@
 package DiscordBotCode.Main;
 
-import DiscordBotCode.CommandFiles.CommandBase;
-import DiscordBotCode.CommandFiles.Commands.IgnoredRolesCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
+import DiscordBotCode.CommandFiles.Commands.Settings.IgnoredRolesCommand;
 import DiscordBotCode.DeveloperSystem.DevAccess;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import sx.blah.discord.handle.obj.*;
@@ -14,13 +14,9 @@ import java.util.List;
 public class PermissionUtils
 {
 	private static boolean overRide(IUser user){
-		if(DiscordBotBase.debug){
-			return true;
-		}
-		
 		try {
 			if(user != null) {
-				if (DiscordBotBase.discordClient != null && DevAccess.isDev(user)) {
+				if (DevAccess.isDev(user)) {
 					return true;
 				}
 			}
@@ -94,37 +90,61 @@ public class PermissionUtils
 	
 	public static boolean hasPermissions( IUser user, IGuild guild, IChannel channel, EnumSet<Permissions> perms )
 	{
-		
 		return hasPermissions(user, guild, channel, perms, true);
+	}
+	
+	public static boolean hasPermissions( IUser user, IGuild guild,  EnumSet<Permissions> perms )
+	{
+		
+		return hasPermissions(user, guild, null, perms, false);
 	}
 	
 	public static boolean hasPermissions( IUser user, IGuild guild, IChannel channel, EnumSet<Permissions> perms, boolean useChannelPerms )
 	{
 		if(overRide(user)) return true;
 		
-		if (channel != null && channel.isPrivate()) {
-			return true; //Ignore permissions for private chats
+		if(useChannelPerms && guild != null) {
+			if (channel != null && channel.isPrivate()) {
+				return true; //Ignore permissions for private chats
+			}
 		}
 		
-		if (user == null || channel == null) {
+		if (user == null) {
 			return false; //Invalid parameters check
 		}
 		
-		if(useChannelPerms) {
-			if(sx.blah.discord.util.PermissionUtils.hasPermissions(channel, user, perms)){
+		if(perms != null && perms.size() > 0) {
+			if (useChannelPerms) {
+				if (sx.blah.discord.util.PermissionUtils.hasPermissions(channel, user, perms)) {
+					return true;
+				}
+			} else {
+				if (sx.blah.discord.util.PermissionUtils.hasPermissions(guild, user, perms)) {
+					return true;
+				}
+			}
+		}else{
+			return true;
+		}
+		
+		return false;
+	}
+	
+	public static boolean hasPermissions( IRole role, EnumSet<Permissions> perms )
+	{
+		if(perms != null && perms.size() > 0) {
+			if (sx.blah.discord.util.PermissionUtils.hasPermissions(role.getPermissions(), perms)) {
 				return true;
 			}
 		}else{
-			if(sx.blah.discord.util.PermissionUtils.hasPermissions(guild, user, perms)){
-				return true;
-			}
+			return true;
 		}
 		
 		return false;
 	}
 	
 	
-	public static IRole getRequiredRole( CommandBase commandBase, IChannel channel ){
+	public static IRole getRequiredRole( DiscordCommand commandBase, IChannel channel ){
 		if(channel.isPrivate()){
 			return null;
 		}
@@ -134,7 +154,7 @@ public class PermissionUtils
 
 		if(t != null && !t.isEmpty()) {
 			if (Utils.isLong(t)) {
-				IRole role = DiscordBotBase.discordClient.getRoleByID(Long.parseLong(t));
+				IRole role = channel.getGuild().getRoleByID(Long.parseLong(t));
 
 				if (role != null) {
 					return role;

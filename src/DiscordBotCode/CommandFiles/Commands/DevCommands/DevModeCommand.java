@@ -1,16 +1,23 @@
 package DiscordBotCode.CommandFiles.Commands.DevCommands;
 
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.DeveloperSystem.DevCommandBase;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.DiscordBotBase;
-import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Misc.Annotation.Command;
 import sx.blah.discord.handle.obj.IMessage;
 
-@DiscordCommand
+@Command
 public class DevModeCommand extends DevCommandBase {
 	@Override
 	public String commandPrefix() {
 		return "devMode";
+	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Toggles dev mode";
 	}
 	
 	@Override

@@ -22,13 +22,6 @@ public class FileUtil
 		return file;
 	}
 	
-	public static File downloadFile(String url, String fileType) throws IOException
-	{
-		File temp = File.createTempFile("temp", fileType);
-		FileUtils.copyURLToFile(new URL(url), temp, 10000, 10000);
-		return temp;
-	}
-	
 	public static File downloadFileWithAgent(String url, String fileType) throws IOException
 	{
 		URLConnection connection = new URL(url).openConnection();

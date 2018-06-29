@@ -1,25 +1,24 @@
 package DiscordBotCode.CommandFiles.Commands;
 
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.CommandBase;
-import DiscordBotCode.CommandFiles.DiscordSubCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.ICustomSettings;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
-import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Main.PermissionUtils;
+import DiscordBotCode.Misc.Annotation.Command;
 import DiscordBotCode.Setting;
 import org.apache.commons.lang.WordUtils;
 import org.apache.commons.lang3.StringUtils;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.util.EmbedBuilder;
-import sx.blah.discord.util.PermissionUtils;
 
 import java.awt.*;
+import java.util.EnumSet;
 import java.util.StringJoiner;
 
-@DiscordCommand
-public class HelpCommand extends DiscordChatCommand
+@Command
+public class HelpCommand extends DiscordCommand
 {
 	@Override
 	public String commandPrefix()
@@ -28,15 +27,15 @@ public class HelpCommand extends DiscordChatCommand
 	}
 	
 	@Override
-	public String getUsage( CommandBase sourceCommand, IMessage callMessage )
+	public String getCategory()
 	{
-		return "Help <command>";
+		return "info commands";
 	}
 	
 	@Override
-	protected Permissions[] getRequiredPermissions()
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
 	{
-		return new Permissions[]{  };
+		return "Help <command>";
 	}
 	
 	@Override
@@ -49,11 +48,20 @@ public class HelpCommand extends DiscordChatCommand
 		
 		String commandName = String.join(" ", args);
 		
-		CommandBase command = CommandUtils.getCommandName(commandName, message.getChannel());
+		boolean hasAdmin = DiscordBotCode.Main.PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), EnumSet.of(Permissions.ADMINISTRATOR));
+		
+		DiscordCommand command = CommandUtils.getDiscordCommand(commandName, message.getChannel(),  false, !hasAdmin);
 		
 		if(command == null){
 			ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " Found no command with name \"" + commandName + "\"");
 			return;
+		}
+		
+		if(!message.getChannel().isPrivate() && message.getGuild() != null) {
+			if (CommandUtils.isCommandDisabled(message.getGuild(), command)) {
+				ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " This command has been disabled!");
+				return;
+			}
 		}
 		
 		if (!command.hasPermissions(message, new String[]{})) {
@@ -68,19 +76,21 @@ public class HelpCommand extends DiscordChatCommand
 		
 		EmbedBuilder embedBuilder = new EmbedBuilder();
 		
-		StringJoiner joinerPerms = new StringJoiner(",");
+		StringJoiner joinerPerms = new StringJoiner(", ");
 		StringJoiner joinerSubCommands = new StringJoiner("");
 		
-		command.getPermissionsEnumSet().stream().map(Enum::name).forEach((u) -> joinerPerms.add(WordUtils.capitalize(u.replace("_", " "))));
-		
-		if (command instanceof DiscordChatCommand) {
-			for (DiscordSubCommand subCommand : ((DiscordChatCommand) command).subCommands) {
-				if(subCommand.isCommandVisible() && subCommand.hasPermissions(message, args)) {
+		if(command.getRequiredPermissions() != null) {
+			command.getRequiredPermissions().stream().map(Enum::name).forEach(( u ) -> joinerPerms.add(WordUtils.capitalize(u.toLowerCase().replace("_", " "))));
+		}
+
+		for (DiscordCommand subCommand : command.subCommands) {
+			if(subCommand.isCommandVisible() && subCommand.hasPermissions(message, args)) {
+				if(message.getChannel().isPrivate() || message.getGuild() != null && !CommandUtils.isCommandDisabled(message.getGuild(), subCommand)) {
 					String t = WordUtils.capitalize(subCommand.commandPrefix());
 					String usage = subCommand.getUsage(command, message);
 					String u = "\"" + command.commandPrefix() + " " + (usage != null ? usage : subCommand.commandPrefix()) + "\"";
-					
-					t += "\n> Usage: " + (u != null && !u.isEmpty() ? u : subCommand.commandPrefix()) ;
+
+					t += "\n> Usage: " + (u != null && !u.isEmpty() ? u : subCommand.commandPrefix());
 					joinerSubCommands.add("```markdown\n" + t + "```");
 				}
 			}
@@ -97,16 +107,16 @@ public class HelpCommand extends DiscordChatCommand
 		
 		embedBuilder.withDescription("**`'" + WordUtils.capitalize(command.commandPrefix()) + "'` command**");
 		
-		if(command instanceof DiscordSubCommand){
-			DiscordChatCommand command1 = ((DiscordSubCommand)command).baseCommand;
+		if(command.isSubCommand()){
+			DiscordCommand command1 = command.baseCommand;
 			embedBuilder.withDescription("Sub-command of \"" + WordUtils.capitalize(command1.commandPrefix()) + "\"");
 		}
 		
 		if(command.getUsage(this, message) != null) {
 			String usage = command.getUsage(this, message);
 			
-			if(command instanceof DiscordSubCommand){
-				DiscordChatCommand command1 = ((DiscordSubCommand)command).baseCommand;
+			if(command.isSubCommand()){
+				DiscordCommand command1 = command.baseCommand;
 				usage = WordUtils.capitalize(command1.commandPrefix()) + " " + usage;
 			}
 			
@@ -126,10 +136,10 @@ public class HelpCommand extends DiscordChatCommand
 			embedBuilder.appendField("Required Role", DiscordBotCode.Main.PermissionUtils.getRequiredRole(command, message.getChannel()).mention(), false);
 		}
 		
-		if(!message.getChannel().isPrivate() && PermissionUtils.hasPermissions(message.getGuild(), message.getAuthor(), Permissions.ADMINISTRATOR)) {
+		if(!message.getChannel().isPrivate() && PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), EnumSet.of(Permissions.ADMINISTRATOR))) {
 			if(command.getFallbackPermissions() != null && command.getFallbackPermissions().size() > 0){
 				StringJoiner joinerFallbackPerms = new StringJoiner(",");
-				command.getFallbackPermissions().stream().map(Enum::name).forEach((u) -> joinerFallbackPerms.add(WordUtils.capitalize(u.replace("_", " "))));
+				command.getFallbackPermissions().stream().map(Enum::name).forEach((u) -> joinerFallbackPerms.add(WordUtils.capitalize(u.toLowerCase().replace("_", " "))));
 				
 				embedBuilder.appendField("Fallback Permissions", joinerFallbackPerms.toString(), false);
 			}
@@ -165,7 +175,7 @@ public class HelpCommand extends DiscordChatCommand
 			}
 		}
 		
-		if (command instanceof DiscordChatCommand && ((DiscordChatCommand) command).subCommands.size() > 0) {
+		if (command.subCommands.size() > 0) {
 			if(joinerSubCommands.toString() != null && joinerSubCommands.length() > 0) {
 				String t = joinerSubCommands.toString();
 				if(t.length() >= EmbedBuilder.FIELD_CONTENT_LIMIT) t = t.substring(0, EmbedBuilder.FIELD_CONTENT_LIMIT - 4) + "...";
@@ -185,8 +195,14 @@ public class HelpCommand extends DiscordChatCommand
 	
 	
 	@Override
-	public String getDescription( CommandBase sourceCommand, IMessage callerMessage )
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 	{
-		return null;
+		return getShortDescription(sourceCommand, callerMessage);
+	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Shows extended info about a specific command";
 	}
 }

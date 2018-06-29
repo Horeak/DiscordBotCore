@@ -1,28 +1,29 @@
 package DiscordBotCode.DeveloperSystem;
 
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordSubCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.Main.ChatUtils;
-import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.Utils;
+import DiscordBotCode.Misc.Annotation.Command;
+import DiscordBotCode.Misc.Annotation.SubCommand;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IUser;
 import sx.blah.discord.util.RequestBuffer;
 
 import java.util.ArrayList;
 
+@Command
 public class DevAccessCommand extends DevCommandBase
 {
-	public DevAccessCommand()
-	{
-		subCommands.add(new grant(this));
-		subCommands.add(new revoke(this));
-	}
-	
 	@Override
 	public String commandPrefix()
 	{
 		return "DevAccess";
+	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Grant/Revoke dev status";
 	}
 	
 	@Override
@@ -36,102 +37,108 @@ public class DevAccessCommand extends DevCommandBase
 	{
 		return DevAccess.isOwner(message.getAuthor().getLongID());
 	}
-}
-
-class grant extends DiscordSubCommand{
-	public grant( DiscordChatCommand baseCommand )
-	{
-		super(baseCommand);
-	}
 	
-	@Override
-	public String commandPrefix()
+	@SubCommand( parent = DevAccessCommand.class )
+	public static class grant extends DiscordCommand
 	{
-		return "grant";
-	}
-	
-	@Override
-	public void commandExecuted( IMessage message, String[] args )
-	{
-		ArrayList<Long> ids = new ArrayList<>();
-		
-		for(String t : args){
-			if(Utils.isLong(t)){
-				ids.add(Long.parseLong(t));
-			}
+		@Override
+		public String commandPrefix()
+		{
+			return "grant";
 		}
 		
-		for(IUser user : message.getMentions()){
-			ids.add(user.getLongID());
+		@Override
+		public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return "Grants dev status";
 		}
 		
-		for(Long t : ids){
-			RequestBuffer.request(() -> {
-				IUser user = DiscordBotBase.discordClient.fetchUser(t);
-				
-				if(user != null){
-					DevAccess.addDev(t);
-					ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " \"" + user.getName() + "#" + user.getDiscriminator() +"\" has been granted dev status!");
-				}
-			});
+		@Override
+		public void commandExecuted( IMessage message, String[] args )
+		{
+			ArrayList<Long> ids = new ArrayList<>();
 			
-		}
-		
-		if (ids.size() <= 0) {
-			ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " Found no users!");
-		}
-	}
-	
-	@Override
-	public boolean canExecute( IMessage message, String[] args )
-	{
-		return DevAccess.isOwner(message.getAuthor().getLongID());
-	}
-}
-
-class revoke extends DiscordSubCommand{
-	public revoke( DiscordChatCommand baseCommand )
-	{
-		super(baseCommand);
-	}
-	
-	@Override
-	public String commandPrefix()
-	{
-		return "revoke";
-	}
-	
-	@Override
-	public void commandExecuted( IMessage message, String[] args )
-	{
-		ArrayList<Long> ids = new ArrayList<>();
-		
-		for(String t : args){
-			if(Utils.isInteger(t)){
-				ids.add(Long.parseLong(t));
+			for (String t : args) {
+				if (Utils.isLong(t)) {
+					ids.add(Long.parseLong(t));
+				}
+			}
+			
+			for (IUser user : message.getMentions()) {
+				ids.add(user.getLongID());
+			}
+			
+			for (Long t : ids) {
+				RequestBuffer.request(() -> {
+					IUser user = message.getClient().fetchUser(t);
+					
+					if (user != null) {
+						DevAccess.addDev(t);
+						ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " \"" + user.getName() + "#" + user.getDiscriminator() + "\" has been granted dev status!");
+					}
+				});
+				
+			}
+			
+			if (ids.size() <= 0) {
+				ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " Found no users!");
 			}
 		}
 		
-		for(IUser user : message.getMentions()){
-			ids.add(user.getLongID());
-		}
-		
-		for(Long t : ids){
-			if(!DevAccess.isOwner(t)) {
-				DevAccess.removeDev(t);
-			}
-		}
-		
-		if(ids.size() > 0) {
-			ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " " + ids.size() + " users had their dev status revoked!");
-		}else{
-			ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " Found no users!");
+		@Override
+		public boolean canExecute( IMessage message, String[] args )
+		{
+			return DevAccess.isOwner(message.getAuthor().getLongID());
 		}
 	}
 	
-	@Override
-	public boolean canExecute( IMessage message, String[] args )
+	@SubCommand( parent = DevAccessCommand.class )
+	public static class revoke extends DiscordCommand
 	{
-		return DevAccess.isOwner(message.getAuthor().getLongID());
+		@Override
+		public String commandPrefix()
+		{
+			return "revoke";
+		}
+		
+		@Override
+		public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return "Revoke dev status";
+		}
+		
+		@Override
+		public void commandExecuted( IMessage message, String[] args )
+		{
+			ArrayList<Long> ids = new ArrayList<>();
+			
+			for (String t : args) {
+				if (Utils.isInteger(t)) {
+					ids.add(Long.parseLong(t));
+				}
+			}
+			
+			for (IUser user : message.getMentions()) {
+				ids.add(user.getLongID());
+			}
+			
+			for (Long t : ids) {
+				if (!DevAccess.isOwner(t)) {
+					DevAccess.removeDev(t);
+				}
+			}
+			
+			if (ids.size() > 0) {
+				ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " " + ids.size() + " users had their dev status revoked!");
+			} else {
+				ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " Found no users!");
+			}
+		}
+		
+		@Override
+		public boolean canExecute( IMessage message, String[] args )
+		{
+			return DevAccess.isOwner(message.getAuthor().getLongID());
+		}
 	}
 }

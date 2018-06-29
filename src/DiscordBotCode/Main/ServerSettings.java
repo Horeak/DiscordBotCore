@@ -2,6 +2,7 @@ package DiscordBotCode.Main;
 
 import DiscordBotCode.Extra.FileGetter;
 import DiscordBotCode.Extra.FileUtil;
+import DiscordBotCode.Misc.Annotation.Init;
 import sx.blah.discord.handle.obj.IGuild;
 
 import java.io.File;
@@ -15,6 +16,7 @@ public class ServerSettings {
 	
 	public static File folder;
 	
+	@Init
 	public static void init(){
 		folder = FileGetter.getFolder(DiscordBotBase.FilePath + "/serverSettings/");
 		

@@ -8,6 +8,7 @@ class DLLCleaner
 	protected static void clean()
 	{
 		File file = new File(System.getProperty("java.io.tmpdir"));
+		
 		for (int i = 0; i < 5; i++) {
 			if (file.isDirectory()) {
 				for (File e : file.listFiles()) {

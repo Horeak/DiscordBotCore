@@ -1,8 +1,6 @@
 package DiscordBotCode.Main.CommandHandeling.Events;
 
-import DiscordBotCode.CommandFiles.CommandBase;
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordSubCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.DeveloperSystem.DevAccess;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.CommandHandeling.MessageObject;
@@ -10,6 +8,7 @@ import DiscordBotCode.Main.CustomEvents.CommandExecutedEvent;
 import DiscordBotCode.Main.CustomEvents.CommandFailedExecuteEvent;
 import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Misc.Annotation.EventListener;
+import DiscordBotCode.Misc.Annotation.Init;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageEditEvent;
 import sx.blah.discord.handle.impl.events.guild.channel.message.MessageReceivedEvent;
 import sx.blah.discord.handle.obj.IMessage;
@@ -64,7 +63,11 @@ public class CommandInputEvents
 		}
 	}
 	
+	//TODO THis init isnt detected by startup init when in jar?
+	@Init
 	public static void init(){
+		System.out.println("Starting message handling threads!");
+		
 		for(int i = 0; i < threads_amount; i++){
 			CommandHandlingThread thread = new CommandHandlingThread(i + 1);
 			thread.start();
@@ -86,6 +89,14 @@ public class CommandInputEvents
 		
 		if(threads.size() <= 0){
 			System.err.println("No available threads for command handling! Handling message directly");
+			
+			for(CommandHandlingThread th : threads){
+				th.stop();
+			}
+			
+			threads.clear();
+			init();
+			
 			handle(new MessageObject(message));
 			return;
 		}
@@ -140,11 +151,14 @@ public class CommandInputEvents
 	}
 	
 	public static void handle( MessageObject message){
-		CommandBase command = CommandUtils.getDiscordCommand(message.getContent(), message.getChannel());
+		DiscordCommand command = CommandUtils.getDiscordCommand(message.getContent(), message.getChannel());
 		String commandName = "";
 		
-		if(command instanceof DiscordSubCommand){
-			if(command != null && ((DiscordSubCommand)command).baseCommand != null) commandName += ((DiscordSubCommand)command).baseCommand.getClass().getSimpleName() + "/";
+		if(command != null) {
+			if (command.isSubCommand()) {
+				if (command != null && command.baseCommand != null)
+					commandName += command.baseCommand.getClass().getSimpleName() + "/";
+			}
 		}
 		
 		if(command != null){
@@ -168,8 +182,8 @@ public class CommandInputEvents
 				System.out.println(builder.toString());
 			}else{
 				StringBuilder builder = new StringBuilder();
-				String prefix = command instanceof DiscordChatCommand ? ((DiscordChatCommand)command).getCommandSign(message.getChannel()) : DiscordBotBase.getCommandSign();
-				String commandN = command instanceof DiscordSubCommand ? ((DiscordSubCommand)command).baseCommand.commandPrefix() + " " + command.commandPrefix() : command.commandPrefix();
+				String prefix = command instanceof DiscordCommand ? command.getCommandSign(message.getChannel()) : DiscordBotBase.getCommandSign();
+				String commandN = command.isSubCommand() ? command.baseCommand.commandPrefix() + " " + command.commandPrefix() : command.commandPrefix();
 				
 				if(DISPLAY_CHANNEL) builder.append("[").append(message.getAuthor().getName() + "#" + message.getAuthor().getDiscriminator()).append("]");
 				builder.append("Command received in private: ").append(prefix + commandN);
@@ -178,7 +192,9 @@ public class CommandInputEvents
 			}
 		}
 		
-		CommandUtils.executeCommand(message);
+		if(command != null) {
+			CommandUtils.executeCommand(message);
+		}
 	}
 	
 	public static class CommandHandlingThread extends Thread{

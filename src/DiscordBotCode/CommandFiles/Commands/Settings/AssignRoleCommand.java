@@ -1,33 +1,38 @@
-package DiscordBotCode.CommandFiles.Commands;
+package DiscordBotCode.CommandFiles.Commands.Settings;
 
-import DiscordBotCode.CommandFiles.CommandBase;
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordSubCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
-import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Main.ServerSettings;
 import DiscordBotCode.Main.Utils;
-import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Misc.Annotation.Command;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.IRole;
+import sx.blah.discord.handle.obj.Permissions;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.StringJoiner;
 
-@DiscordCommand
-public class AssignRoleCommand extends DiscordChatCommand
+@Command
+public class AssignRoleCommand extends DiscordCommand
 {
 	@Override
-	public String getUsage( CommandBase sourceCommand, IMessage callMessage )
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
 	{
 		return "assignRole <command(s)> <role>";
 	}
 	
 	@Override
-	public String getDescription( CommandBase sourceCommand, IMessage callerMessage )
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 	{
 		return "Allows assigning a role to any command on the bot, the role assigned will be the minimum role required to use the command. When using the command the input can have multiple commands at once which all will be assigned the same role, the commands that are being used for this command will require prefix and command";
+	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Specify required role for commands";
 	}
 	
 	@Override
@@ -36,18 +41,36 @@ public class AssignRoleCommand extends DiscordChatCommand
 	}
 	
 	@Override
+	public String getCategory()
+	{
+		return "settings";
+	}
+	
+	@Override
+	public EnumSet<Permissions> getRequiredPermissions()
+	{
+		return EnumSet.of(Permissions.ADMINISTRATOR);
+	}
+	
+	@Override
+	public boolean commandPrivateChat()
+	{
+		return false;
+	}
+	
+	@Override
 	public void commandExecuted( IMessage message, String[] args ) {
 		String text = String.join("_", args);
 		
 		IRole role = null;
-		ArrayList<CommandBase> commands = new ArrayList<>();
+		ArrayList<DiscordCommand> commands = new ArrayList<>();
 		
 		if(message.getRoleMentions().size() > 0){
 			role = message.getRoleMentions().get(0);
 		}
 		
 		
-		CommandBase command1 = CommandUtils.getDiscordCommand(text.replace("_", " "), message.getChannel());
+		DiscordCommand command1 = CommandUtils.getDiscordCommand(text.replace("_", " "), message.getChannel());
 		
 		if(command1 != null) {
 			commands.add(command1);
@@ -61,20 +84,20 @@ public class AssignRoleCommand extends DiscordChatCommand
 		for(String t : args){
 			if(role == null) {
 				if (Utils.isLong(t)) {
-					if (DiscordBotBase.discordClient.getRoleByID(Long.parseLong(t)) != null) {
-						role = DiscordBotBase.discordClient.getRoleByID(Long.parseLong(t));
+					if (message.getClient().getRoleByID(Long.parseLong(t)) != null) {
+						role = message.getClient().getRoleByID(Long.parseLong(t));
 						text = text.replace(t, "");
 					}
 				}
 			}
 			
-			CommandBase command = CommandUtils.getDiscordCommand(t, message.getChannel());
+			DiscordCommand command = CommandUtils.getDiscordCommand(t, message.getChannel());
 			
 			boolean has = false;
 			
-			for(CommandBase dc : commands){
-				if(dc instanceof DiscordSubCommand){
-					if(((DiscordSubCommand) dc).baseCommand == command){
+			for(DiscordCommand dc : commands){
+				if(dc.isSubCommand()){
+					if(dc.baseCommand == command){
 						has = true;
 					}
 				}
@@ -107,7 +130,7 @@ public class AssignRoleCommand extends DiscordChatCommand
 		
 		StringJoiner builder = new StringJoiner(", ");
 		
-		for(CommandBase dc : commands){
+		for(DiscordCommand dc : commands){
 			String key = CommandUtils.getKeyFromCommand(dc);
 			
 			if(ServerSettings.valueExsists(message.getGuild(), key) && role == null){

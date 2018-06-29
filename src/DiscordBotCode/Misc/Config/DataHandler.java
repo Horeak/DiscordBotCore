@@ -25,7 +25,7 @@ public class DataHandler
 	private static ConcurrentHashMap<Field, Class> fieldClasses = new ConcurrentHashMap<>();
 	
 	private static final Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
-	private static final Gson gson1 = new GsonBuilder().serializeNulls().create();
+	private static final Gson gson1 = new GsonBuilder().serializeNulls().serializeNulls().create();
 	
 	public static boolean load_done = false;
 	
@@ -69,7 +69,7 @@ public class DataHandler
 			
 			while(isAlive()){
 				if(queueDataLoad.size() > 0){
-					if(DiscordBotBase.discordClient != null && DiscordBotBase.discordClient.isReady()){
+					if(DiscordBotBase.init){
 						for(int i = 0; i < queueDataLoad.size(); i++){
 							Field fe = queueDataLoad.get(i);
 							
@@ -118,7 +118,7 @@ public class DataHandler
 		for(Field fe : objects){
 			if(values.containsKey(fe)){
 				Object t = gson1.toJson(getValue(fe));
-				Object tg = values.get(fe);
+				String tg = values.get(fe);
 				
 				if (t != null && !Objects.equals(t, tg) && !t.equals(tg)) {
 					differentValue(fe, getValue(fe));
@@ -136,7 +136,7 @@ public class DataHandler
 			
 			executor.schedule(() -> {
 				toSave.remove(fe);
-				save(fe);
+				save(fe, value);
 			}, 1000, TimeUnit.MILLISECONDS);
 		}
 	}
@@ -166,7 +166,7 @@ public class DataHandler
 						notifyDataLoad(fe);
 					}
 				} else {
-					save(fe);
+					save(fe, null);
 				}
 			}
 		}catch (IOException e){
@@ -202,18 +202,18 @@ public class DataHandler
 
 								notifyDataLoad(fe1);
 							}else{
-								save(fe1);
+								save(fe1, null);
 							}
 						}
 						
 					}else {
 						for(Field fe1 : fe.getFields()){
-							save(fe1);
+							save(fe1, null);
 						}
 					}
 				}else {
 					for(Field fe1 : fe.getFields()){
-						save(fe1);
+						save(fe1, null);
 					}
 				}
 			}
@@ -244,7 +244,7 @@ public class DataHandler
 					DataLoad data = method.getAnnotation(DataLoad.class);
 					
 					if (data.require_discord()) {
-						if (DiscordBotBase.discordClient == null || !DiscordBotBase.discordClient.isReady()) {
+						if (!DiscordBotBase.init) {
 							if (!queueDataLoad.contains(fe)) {
 								queueDataLoad.add(fe);
 							}
@@ -267,10 +267,14 @@ public class DataHandler
 		}
 	}
 	
-	private static void save(Field fe)
+	private static void save(Field fe, Object value)
 	{
 		HashMap<String, Object> saveData = new HashMap<>();
 		ArrayList<Field> obs = new ArrayList<>();
+		
+		if(value == null){
+			value = getValue(fe);
+		}
 		
 		DataObject ob = null;
 		
@@ -287,34 +291,46 @@ public class DataHandler
 		
 		String key = !ob.name().isEmpty() ? ob.name() : fe.getDeclaringClass().getName() + "|" + fe.getName();
 		File fes = FileGetter.getFile((ob.use_prefix() ? prefix + "/" : "") + ob.file_path());
+		
 		obs.add(fe);
 		
 		if(clas){
 			HashMap<String, Object> values = new HashMap<>();
 			
 			for(Field fe1 : fe.getDeclaringClass().getFields()){
-				values.put(fe1.getName(), values.containsValue(fe1) ? values.get(fe1) : getValue(fe1));
+				values.put(fe1.getName(), getValue(fe1));
 			}
 			
 			saveData.put(key, values);
 		}else {
-			saveData.put(key, values.containsValue(fe) ? values.get(fe) : getValue(fe));
+			saveData.put(key, value);
 		}
+		
+		boolean pretty = ob.pretty();
 		
 		for(Field field : objects){
 			if(field.isAnnotationPresent(DataObject.class)){
 				DataObject ob1 = field.getAnnotation(DataObject.class);
+				
+				if(pretty && !ob1.pretty()){
+					pretty = false;
+				}
+				
 				if(ob1.file_path().equals(ob.file_path())){
 					if(!obs.contains(field)){
 						obs.add(field);
-						saveData.put(!ob1.name().isEmpty() ? ob1.name() : (field.getDeclaringClass().getName() + "|" + field.getName()), values.containsValue(field) ? values.get(field) : getValue(field));
+						
+						Object t = getValue(field);
+						String key1 = !ob1.name().isEmpty() ? ob1.name() : (field.getDeclaringClass().getName() + "|" + field.getName());
+						
+						if(!saveData.containsKey(key1)) saveData.put(key1, t);
 					}
 				}
 			}
 		}
 		
 		try {
-			FileIOUtils.write(fes.toPath(), gson.toJson(saveData));
+			FileIOUtils.write(fes.toPath(), pretty ? gson.toJson(saveData) : gson1.toJson(saveData));
 		} catch (IOException e) {
 			DiscordBotBase.handleException(e);
 		}
@@ -329,12 +345,10 @@ public class DataHandler
 				}
 				
 				if(fieldClasses.containsKey(field)){
-					
 						return field.get(fieldClasses.get(field));
 				}else {
 					Class t = field.getDeclaringClass();
 					fieldClasses.put(field, t);
-					
 					return field.get(t);
 				}
 			}else{

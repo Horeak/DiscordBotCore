@@ -5,12 +5,14 @@ import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.CommandHandeling.ICommandFormatter;
 import DiscordBotCode.Main.CommandHandeling.ObjectConverter;
+import DiscordBotCode.Misc.Annotation.CommandFormatter;
 import sx.blah.discord.handle.obj.IMessage;
 
 import java.lang.reflect.Field;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@CommandFormatter
 public class CommandDataFormat implements ICommandFormatter
 {
 	@Override

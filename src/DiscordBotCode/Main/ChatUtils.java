@@ -3,9 +3,7 @@ package DiscordBotCode.Main;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.CommandHandeling.MessageObject;
 import DiscordBotCode.Misc.Requests;
-import com.google.common.net.InternetDomainName;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang.WordUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.select.Elements;
@@ -16,8 +14,11 @@ import sx.blah.discord.handle.impl.obj.PrivateChannel;
 import sx.blah.discord.handle.obj.*;
 import sx.blah.discord.util.*;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Instant;
@@ -44,7 +45,7 @@ public class ChatUtils
 	
 	public static Message createMessage( String text, IChannel channel, boolean pinned, List<IMessage.Attachment> attachments, List<Embed> embeds, List<IReaction> reactions, Long webhookID, ArrayList<Long> mentions )
 	{
-		return createMessage(DiscordBotBase.discordClient.getOurUser(), text, channel, pinned, attachments, embeds, reactions, webhookID, mentions);
+		return createMessage(channel.getClient().getOurUser(), text, channel, pinned, attachments, embeds, reactions, webhookID, mentions);
 	}
 	
 	public static Message createMessage( IUser user, String text, IChannel channel, boolean pinned, List<IMessage.Attachment> attachments, List<Embed> embeds, List<IReaction> reactions, Long webhookID, ArrayList<Long> mentions )
@@ -53,7 +54,7 @@ public class ChatUtils
 		if (text == null || text.isEmpty()) {
 			return null;
 		}
-		MessageTokenizer tokenizer = new MessageTokenizer(DiscordBotBase.discordClient, text);
+		MessageTokenizer tokenizer = new MessageTokenizer(channel.getClient(), text);
 		List<Long> roleMentions = new ArrayList<>();
 		
 		while (tokenizer.hasNextMention()) {
@@ -63,7 +64,7 @@ public class ChatUtils
 			}
 		}
 		
-		return new Message(DiscordBotBase.discordClient,                   //client
+		return new Message(channel.getClient(),                   //client
 				getMessageSnowflake(channel),                              //id
 				text,                                                      //content
 				user,                 //user
@@ -87,7 +88,7 @@ public class ChatUtils
 			return null;
 		}
 		
-		MessageTokenizer tokenizer = new MessageTokenizer(DiscordBotBase.discordClient, text);
+		MessageTokenizer tokenizer = new MessageTokenizer(channel.getClient(), text);
 		ArrayList<Long> mentions = new ArrayList<>();
 		
 		while (tokenizer.hasNextMention()) {
@@ -129,9 +130,9 @@ public class ChatUtils
 		
 		final IMessage[] message1 = { null };
 		
-		Message messageObject = new Message(DiscordBotBase.discordClient, getMessageSnowflake(chat), message, DiscordBotBase.discordClient.getOurUser(), chat, null, null, false, new ArrayList<>(), new ArrayList<>(), null, false, null, 0, IMessage.Type.DEFAULT);
+		Message messageObject = new Message(chat.getClient(), getMessageSnowflake(chat), message, chat.getClient().getOurUser(), chat, null, null, false, new ArrayList<>(), new ArrayList<>(), null, false, null, 0, IMessage.Type.DEFAULT);
 		if (messageObject != null && messageObject.getContent() != null && !messageObject.getContent().isEmpty()) {
-			MessageBuilder builder = new MessageBuilder(DiscordBotBase.discordClient);
+			MessageBuilder builder = new MessageBuilder(chat.getClient());
 			builder.withChannel(chat);
 			
 			if(styles != null) {
@@ -205,20 +206,6 @@ public class ChatUtils
 				
 				Elements element = doc.select("link[href~=.*\\.(ico|png)]");
 				
-				InternetDomainName domain = InternetDomainName.from(ur.getHost()).topPrivateDomain();
-				
-				if(siteName.size() > 0 || domain != null){
-					builder.withFooterText(siteName.size() <= 0 ? WordUtils.capitalize(domain.toString()) : siteName.attr("content"));
-					
-					if(element.size() > 0){
-						String t = element.attr("href");
-						
-						if(t != null) {
-							builder.withFooterIcon(t);
-						}
-					}
-				}
-				
 				if(titleEl.size() > 0){
 					String title = titleEl.attr("content");
 					
@@ -226,20 +213,19 @@ public class ChatUtils
 						title = title.substring(0, (EmbedBuilder.AUTHOR_NAME_LIMIT - 4)) + "...";
 					}
 					
-					builder.withAuthorName(title);
-					builder.withAuthorUrl(tg);
+					builder.appendDescription("[**" + title + "**](" + tg + ")\n");
 				}
 				
 				if(descriptionEl.size() > 0){
 					String description = descriptionEl.attr("content").replace("\n", "").replace("  ", "");
 					
-					description += "...";
-					
 					if(description.length() > EmbedBuilder.DESCRIPTION_CONTENT_LIMIT){
 						description = description.substring(0, (EmbedBuilder.DESCRIPTION_CONTENT_LIMIT - 4)) + "...";
 					}
 					
-					builder.withDescription(description);
+					if(!description.isEmpty()) {
+						builder.appendDescription(description);
+					}
 				}
 				
 				if(color.size() > 0){
@@ -252,21 +238,23 @@ public class ChatUtils
 				}
 				
 				if(imageEl.size() > 0){
+					String image = imageEl.attr("content");
 					boolean small = true;
 					
-					Elements imageWidth = doc.select("meta[property=og:image:width]");
-					Elements imageHeight = doc.select("meta[property=og:image:height]");
+					URL url = new URL(image);
+					HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+					connection.setRequestProperty(
+							"User-Agent",
+							"Mozilla/5.0 (Windows NT 6.3; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0");
 					
-					if(imageWidth.size() > 0 && imageHeight.size() > 0){
-						int w = Integer.parseInt(imageWidth.attr("content"));
-						int h = Integer.parseInt(imageHeight.attr("content"));
-						
-						if(w > 800 || h > 800){
-							small = false;
-						}
+					BufferedImage bimg = ImageIO.read(connection.getInputStream());
+					int width          = bimg.getWidth();
+					int height         = bimg.getHeight();
+					
+					if(width > 500 || height > 500){
+						small = false;
 					}
 					
-					String image = imageEl.attr("content");
 					
 					if(small){
 						builder.withThumbnail(image);
@@ -284,7 +272,7 @@ public class ChatUtils
 		
 		
 		final IMessage[] message1 = { null };
-		MessageBuilder builder = new MessageBuilder(DiscordBotBase.discordClient);
+		MessageBuilder builder = new MessageBuilder(chat.getClient());
 		builder.withChannel(chat);
 		
 		builder.withContent(message);
@@ -306,7 +294,7 @@ public class ChatUtils
 	
 	public static IMessage sendMessage( IMessage messageIn, MessageBuilder.Styles styles, boolean useTTS, EmbedObject object )
 	{
-		MessageBuilder builder = new MessageBuilder(DiscordBotBase.discordClient);
+		MessageBuilder builder = new MessageBuilder(messageIn.getClient());
 		
 		if(CommandUtils.getCurrentHandledMessage() != null && CommandUtils.getCurrentHandledMessage().getPost_channel() != null){
 			builder.withChannel(CommandUtils.getCurrentHandledMessage().getPost_channel());
@@ -377,7 +365,7 @@ public class ChatUtils
 	
 	public static IVoiceChannel getConnectedBotChannel( IGuild guild )
 	{
-		for (IVoiceChannel channel : DiscordBotBase.discordClient.getConnectedVoiceChannels()) {
+		for (IVoiceChannel channel : guild.getClient().getConnectedVoiceChannels()) {
 			if (channel.getGuild() == guild) {
 				return channel;
 			}

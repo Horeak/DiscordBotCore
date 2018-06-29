@@ -1,32 +1,38 @@
-package DiscordBotCode.CommandFiles.Commands;
+package DiscordBotCode.CommandFiles.Commands.Settings;
 
-import DiscordBotCode.CommandFiles.CommandBase;
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordSubCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.ICustomSettings;
 import DiscordBotCode.Main.ChatUtils;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
 import DiscordBotCode.Main.ServerSettings;
-import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Misc.Annotation.Command;
 import DiscordBotCode.Misc.Annotation.SubCommand;
 import DiscordBotCode.Setting;
 import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.handle.obj.Permissions;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 
-@DiscordCommand
-public class SettingsCommand extends DiscordChatCommand{
+@Command
+public class SettingsCommand extends DiscordCommand
+{
 	@Override
-	public String getUsage( CommandBase sourceCommand, IMessage callMessage )
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
 	{
 		return "settings <command> <setting name> <value>";
 	}
 	
 	@Override
-	public String getDescription( CommandBase sourceCommand, IMessage callerMessage )
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 	{
 		return "Allows changing the command specific settings, the settings for each command can be seen with the help command when the user has ADMINISTRATOR permission. To use the command state the command with prefix, then the name of the setting to be changed and finaly the value, the help command will also state the value type if there isnt already a value assigned, the possible value types are: Role, Channel, User, Text, State (State = true/false)";
+	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Server and command settings";
 	}
 	
 	@Override
@@ -35,16 +41,22 @@ public class SettingsCommand extends DiscordChatCommand{
 	}
 	
 	@Override
+	public String getCategory()
+	{
+		return "settings";
+	}
+	
+	@Override
 	public void commandExecuted( IMessage message, String[] args ) {
 		String text = String.join(" ", args);
 		
-		CommandBase command = CommandUtils.getDiscordCommand(text, message.getChannel());
+		DiscordCommand command = CommandUtils.getDiscordCommand(text, message.getChannel());
 		ArrayList<String> replaces = new ArrayList<>();
 		
 		
 		if(command != null) {
-			if(command instanceof DiscordChatCommand){
-				String t = ((DiscordChatCommand)command).getCommandSign(message.getChannel()) + command.commandPrefix();
+			if(command instanceof DiscordCommand){
+				String t = ((DiscordCommand)command).getCommandSign(message.getChannel()) + command.commandPrefix();
 				
 				if(!replaces.contains(t)) {
 					text = text.replaceFirst(t, "");
@@ -52,8 +64,8 @@ public class SettingsCommand extends DiscordChatCommand{
 					replaces.add(command.commandPrefix());
 				}
 				
-			}else if(command instanceof DiscordSubCommand){
-				String t = (((DiscordSubCommand) command).baseCommand).getCommandSign(message.getChannel()) + command.commandPrefix();
+			}else if(command.isSubCommand()){
+				String t = (command.baseCommand).getCommandSign(message.getChannel()) + command.commandPrefix();
 				
 				if(replaces.contains(t)) {
 					text = text.replaceFirst(t, "");
@@ -110,27 +122,30 @@ public class SettingsCommand extends DiscordChatCommand{
 	}
 	
 	@Override
-	protected Permissions[] getRequiredPermissions() {
-		return new Permissions[]{Permissions.ADMINISTRATOR};
+	public EnumSet<Permissions> getRequiredPermissions()
+	{
+		return EnumSet.of(Permissions.ADMINISTRATOR);
 	}
 	
-
 	@SubCommand(parent = SettingsCommand.class)
-	public static class prefix extends DiscordSubCommand{
-		public prefix( DiscordChatCommand baseCommand ) {
-			super(baseCommand);
-		}
-		
+	public static class prefix extends DiscordCommand
+	{
 		@Override
-		public String getUsage( CommandBase sourceCommand, IMessage callMessage )
+		public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
 		{
 			return "prefix <prefix>";
 		}
 		
 		@Override
-		public String getDescription( CommandBase sourceCommand, IMessage callerMessage )
+		public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 		{
 			return "Allows changing the prefix used for all commands in this server, the prefix can be max 2 characters long";
+		}
+		
+		@Override
+		public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return "Allows changing server prefix";
 		}
 		
 		@Override

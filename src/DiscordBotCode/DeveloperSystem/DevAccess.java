@@ -51,7 +51,7 @@ public class DevAccess
 		
 		try {
 			t = DiscordBotBase.discordClient != null && DiscordBotBase.discordClient.getApplicationOwner() != null && DiscordBotBase.discordClient.getApplicationOwner().getLongID() == id;
-		}catch (Exception e){
+		} catch (Exception e) {
 			DiscordBotBase.handleException(e);
 		}
 		
@@ -85,7 +85,7 @@ public class DevAccess
 	public static void msgDevs(String message, IUser sender){
 		for(Map.Entry<Long, DevUserObject> t : devList.entrySet()){
 			if(t.getValue().notifications){
-				IUser temp = DiscordBotBase.discordClient.getUserByID(t.getKey());
+				IUser temp = sender.getClient().getUserByID(t.getKey());
 				ChatUtils.sendMessage(temp.getOrCreatePMChannel(), message);
 			}
 		}

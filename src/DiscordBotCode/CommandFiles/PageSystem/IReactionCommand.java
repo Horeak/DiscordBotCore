@@ -1,6 +1,5 @@
 package DiscordBotCode.CommandFiles.PageSystem;
 
-import DiscordBotCode.Main.DiscordBotBase;
 import DiscordBotCode.Misc.CustomEntry;
 import sx.blah.discord.handle.impl.events.guild.channel.message.reaction.ReactionAddEvent;
 import sx.blah.discord.handle.impl.obj.ReactionEmoji;
@@ -43,7 +42,7 @@ public interface IReactionCommand
 		if(event.getReaction() != null){
 			if(event.getReaction().getEmoji() != null){
 				
-				IUser user1 = DiscordBotBase.discordClient.getUserByID(user);
+				IUser user1 = event.getClient().getUserByID(user);
 				if(user1 != null) {
 					RequestBuffer.request(() -> event.getMessage().removeReaction(user1, event.getReaction()));
 					

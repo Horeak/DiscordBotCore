@@ -161,4 +161,19 @@ public class Utils
 		
 		return list;
 	}
+	
+	public static String getMentionString( IMessage message )
+	{
+		StringJoiner builder = new StringJoiner(" ");
+		
+		message.getRoleMentions().forEach((r) -> builder.add(r.mention()));
+		
+		if(!message.mentionsEveryone()) {
+			message.getMentions().forEach(( r ) -> builder.add(r.mention()));
+		}else{
+			builder.add("@everyone");
+		}
+		
+		return builder.toString();
+	}
 }

@@ -1,10 +1,10 @@
 package DiscordBotCode.DeveloperSystem;
 
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
 
-public abstract class DevCommandBase extends DiscordChatCommand
+public abstract class DevCommandBase extends DiscordCommand
 {
 	@Override
 	public boolean canExecute( IMessage message, String[] args )
@@ -25,8 +25,8 @@ public abstract class DevCommandBase extends DiscordChatCommand
 	}
 	
 	@Override
-	public boolean isCommandVisible()
+	public String getCategory()
 	{
-		return false;
+		return "dev commands";
 	}
 }

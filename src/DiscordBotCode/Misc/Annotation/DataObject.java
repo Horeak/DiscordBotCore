@@ -12,4 +12,6 @@ public @interface DataObject
 	String file_path();
 	String name() default "";
 	boolean use_prefix() default true;
+	boolean pretty() default true;
+	
 }

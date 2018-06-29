@@ -1,23 +1,18 @@
 package DiscordBotCode.Main;
 
-import DiscordBotCode.CommandFiles.DiscordChatCommand;
-import DiscordBotCode.CommandFiles.DiscordSubCommand;
+import DiscordBotCode.CommandFiles.DiscordCommand;
 import DiscordBotCode.Extra.FileGetter;
 import DiscordBotCode.Extra.FileUtil;
 import DiscordBotCode.Extra.TimeUtil;
 import DiscordBotCode.Main.CommandHandeling.CommandUtils;
-import DiscordBotCode.Main.CommandHandeling.Events.CommandInputEvents;
-import DiscordBotCode.Main.CommandHandeling.Formatters.CommandDataFormat;
-import DiscordBotCode.Main.CommandHandeling.Formatters.IgnoredMessageFormat;
-import DiscordBotCode.Main.CommandHandeling.Formatters.MentionsMessageFormat;
+import DiscordBotCode.Main.CommandHandeling.ICommandFormatter;
 import DiscordBotCode.Main.CustomEvents.BotCloseEvent;
-import DiscordBotCode.Misc.Annotation.DataObject;
-import DiscordBotCode.Misc.Annotation.DiscordCommand;
+import DiscordBotCode.Misc.Annotation.*;
 import DiscordBotCode.Misc.Annotation.EventListener;
-import DiscordBotCode.Misc.Annotation.SubCommand;
 import DiscordBotCode.Misc.Config.CstReflections;
 import DiscordBotCode.Misc.Config.DataHandler;
 import DiscordBotCode.Misc.LoggerUtil;
+import com.google.common.base.Predicate;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.filefilter.DirectoryFileFilter;
 import org.apache.commons.io.filefilter.RegexFileFilter;
@@ -27,13 +22,12 @@ import org.reflections.scanners.FieldAnnotationsScanner;
 import org.reflections.scanners.MethodAnnotationsScanner;
 import org.reflections.scanners.SubTypesScanner;
 import org.reflections.scanners.TypeAnnotationsScanner;
+import org.reflections.util.ConfigurationBuilder;
+import org.reflections.util.FilterBuilder;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
 import sx.blah.discord.api.events.Event;
 import sx.blah.discord.api.events.IListener;
-import sx.blah.discord.handle.impl.events.guild.GuildCreateEvent;
-import sx.blah.discord.handle.impl.events.shard.DisconnectedEvent;
-import sx.blah.discord.handle.impl.events.shard.ReconnectFailureEvent;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.modules.Configuration;
 import sx.blah.discord.util.BotInviteBuilder;
@@ -41,19 +35,19 @@ import sx.blah.discord.util.BotInviteBuilder;
 import javax.management.ReflectionException;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class DiscordBotBase
 {
-	//TODO Do a proper clean up of old code and make improvements (Special command system code could need a look at)
-	
 	public static final String INFO_FILE_TAG = "INFO_FILE";
 	private static final String VERSION_FILE_TAG = "VERSION_FILE";
 	
@@ -61,14 +55,19 @@ public class DiscordBotBase
 	
 	public static IDiscordClient discordClient;
 	public static BotInviteBuilder inviteBuilder;
-	
-	public static DiscordBotBase discordBotBase = new DiscordBotBase();
 	public static File tempFolder = null;
 	
 	public static boolean debug = false;
 	public static boolean modules = false;
 	
+	public static boolean jarFile = false;
+	public static URL launchDir = null;
+	
+	public static boolean preInit = false;
+	public static boolean init = false;
+	
 	private static boolean initListeners = false;
+	
 	private static HashMap<Class, ArrayList<Method>> eventListeners = new HashMap<>();
 	
 	public static String FilePath = "";
@@ -78,15 +77,12 @@ public class DiscordBotBase
 	private static String commandSign = null;
 	
 	public static boolean devMode = false;
-	
-	private static ArrayList<String> args = null;
-	
-	private static ArrayList<BotLauncher> launchers = new ArrayList<>();
-	
 	private static CstReflections annoReflection;
 	
+	@VariableState( variable_class = "DiscordBotCode.Main.DiscordBotBase", variable_name = "confirmation_check")
 	@DataObject(file_path = "confirmation.json", name = "run_confirmation")
 	private static boolean confirmation = false;
+	private static boolean confirmation_check = true;
 	
 	public static void main(String[] args)
 	{
@@ -102,24 +98,49 @@ public class DiscordBotBase
 		System.out.println("debug: " + debug);
 		System.out.println("modules: " + modules);
 		
-		Reflections.log = null;
-		annoReflection = new CstReflections("", new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new MethodAnnotationsScanner(), new SubTypesScanner());
+		if (debug) {
+			confirmation_check = false;
+		}
+		
+//		Reflections.log = null;
+		
+		try{
+			File fe = new File(DiscordBotBase.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+			jarFile = fe.exists() && fe.isFile();
+			
+			System.out.println("jarFile: " + jarFile);
+			
+			URL url = new URL("file:" + (jarFile ? fe.getPath() : System.getProperty("user.dir").replace("\\", "/")));
+			Predicate<String> filter = new FilterBuilder().include("(?i)Discord.*");
+			
+			launchDir = url;
+			preInit(url, filter);
+			
+			ConfigurationBuilder builder = new ConfigurationBuilder();
+			
+			builder.setInputsFilter(filter);
+			builder.setUrls(url);
+			builder.forPackages(DiscordBotBase.class.getPackage().getName());
+			builder.setScanners(new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new MethodAnnotationsScanner(), new SubTypesScanner());
+			
+			annoReflection = new CstReflections(builder);
+		}catch (IOException | URISyntaxException e){
+			DiscordBotBase.handleException(e);
+		}
 		
 		try {
 			initFile();
 			initVersion();
 			
-			checkConfirmation();
+			if(confirmation_check) checkConfirmation();
 			
 			initBot();
-			initSubBot();
+			init();
 			
-			initReconnectionThread();
+			postInit();
 		}catch (Exception e){
 			handleException(e);
 		}
-		
-		discordBotBase.startup();
 	}
 	
 	private static void initFile() throws IOException
@@ -128,12 +149,12 @@ public class DiscordBotBase
 		File infoFile = FileUtil.getFileFromStream(ClassLoader.getSystemResourceAsStream(fileName), ".properties");
 		
 		baseFilePath = new File(System.getProperty("user.dir") + "/");
+		
 		FileUtil.initFile(infoFile, INFO_FILE_TAG);
-		FilePath = FileGetter.getFolder(baseFilePath.getPath() + FileUtil.getValue(INFO_FILE_TAG, "file_path")).getCanonicalPath();
+		FilePath = FileGetter.getFolder(baseFilePath.getPath() + (!jarFile ? "/../../run/" : "") + FileUtil.getValue(INFO_FILE_TAG, "file_path")).getCanonicalPath();
 		tempFolder = FileGetter.getFolder(DiscordBotBase.FilePath + "/tmp/");
 		
 		LoggerUtil.activate();
-		
 		DataHandler.init(FilePath);
 		
 		infoFile.delete();
@@ -185,6 +206,58 @@ public class DiscordBotBase
 		System.out.println("Confirmation has been given!");
 	}
 	
+	private static void preInit(URL url, Predicate<String> filter)
+	{
+		try {
+			ConfigurationBuilder builder = new ConfigurationBuilder();
+			
+			builder.filterInputsBy(filter);
+			builder.setUrls(url);
+			builder.forPackages(DiscordBotBase.class.getPackage().getName());
+			builder.setScanners(new MethodAnnotationsScanner());
+			
+			CstReflections reflections = new CstReflections(builder);
+			Set<Method> methods = reflections.getMethodsAnnotatedWith(PreInit.class);
+			
+			System.out.println("Found " + methods.size() + " preInit method" + (methods.size() > 1 ? "s" : "") + "!");
+			
+			for (Method ob : methods) {
+				if(!ob.isAccessible()){
+					ob.setAccessible(true);
+				}
+				
+				if(!Modifier.isStatic(ob.getModifiers())){
+					System.err.println("preInit method: " + ob + " is not static!");
+					continue;
+				}
+				
+				ob.invoke(null);
+			}
+			
+			System.out.println("preInit done.");
+		}catch (Exception e){
+			if (!(e instanceof ReflectionException)) {
+				DiscordBotBase.handleException(e);
+			}
+		}
+		
+		preInit = true;
+	}
+	
+	private static void init()
+	{
+		ReflectionUtils.invokeMethods(Init.class);
+		System.out.println("Init done.");
+		init = true;
+	}
+	
+	private static void postInit()
+	{
+		ReflectionUtils.invokeMethods(PostInit.class);
+		System.out.println("PostInit done.");
+	}
+	
+	
 	private static void initBot(){
 		if(!modules) Configuration.LOAD_EXTERNAL_MODULES = false;
 		
@@ -197,6 +270,7 @@ public class DiscordBotBase
 		
 		ClientBuilder builder = new ClientBuilder();
 		builder.withToken(token);
+		builder.withRecommendedShardCount();
 		
 		discordClient = builder.build();
 		discordClient.login();
@@ -207,55 +281,14 @@ public class DiscordBotBase
 		System.out.println("Bot init done.");
 	}
 	
-	private static void initSubBot()
-	{
-		try {
-			String launcher_class = FileUtil.getValue(INFO_FILE_TAG, "launcher_class");
-			
-			CstReflections reflections = new CstReflections(launcher_class);
-			Set<Class<? extends BotLauncher>> classes = reflections.getSubTypesOf(BotLauncher.class);
-			
-			System.out.println("Found " + classes.size() + " bot launcher class" + (classes.size() > 1 ? "es" : "") + "!");
-			
-			for (Class<? extends BotLauncher> ob : classes) {
-				BotLauncher launcher = ob.newInstance();
-				launchers.add(launcher);
-				new Thread(launcher::run).start();
-			}
-			
-			System.out.println("Sub bot init done.");
-		}catch (Exception e){
-			if (!(e instanceof ReflectionException)) {
-				DiscordBotBase.handleException(e);
-			}
-		}
+	@Init
+	private static void initCommandFormatters(){
+		CommandUtils.formatters.addAll(ReflectionUtils.getTypes(ICommandFormatter.class, CommandFormatter.class));
 	}
 	
-	private static void initReconnectionThread(){
-		new Thread(() -> {
-			try {
-				Thread.sleep(TimeUnit.MILLISECONDS.convert(5, TimeUnit.MINUTES));
-			} catch (InterruptedException e) {
-				DiscordBotBase.handleException(e);
-			}
-			
-			if(DiscordBotBase.discordClient == null || !discordClient.isReady() || !discordClient.isLoggedIn()){
-				reconnectBot();
-			}
-			
-		}).start();
-	}
-	
-	private void startup(){
+	@PostInit
+	private static void startup(){
 		clearTmpFolder();
-		
-		CommandUtils.formatters.add(new IgnoredMessageFormat());
-		CommandUtils.formatters.add(new MentionsMessageFormat());
-		CommandUtils.formatters.add(new CommandDataFormat());
-		
-		ServerSettings.init();
-		CommandInputEvents.init();
-		registerListeners();
 		
 		System.out.println("Started \"" + DiscordBotBase.discordClient.getOurUser().getName() + "\" successfully!");
 		System.out.println("Version \"" + getVersion() + "\"");
@@ -263,29 +296,26 @@ public class DiscordBotBase
 		System.out.println("Found " + DiscordBotBase.discordClient.getGuilds().size() + " server(s), {" + getGuilds() + "}");
 		System.out.println("Command prefix is set to \'" + getCommandSign() + "\'");
 		
+		if(getPermissionList() != null){
+			inviteBuilder = new BotInviteBuilder(discordClient).withPermissions(permissionList);
+			System.out.println("Invite link: " + DiscordBotBase.inviteBuilder.build());
+		}
+		
 		Runtime.getRuntime().addShutdownHook(new Thread(DiscordBotBase::onBotClose));
+		
 		System.out.println("Startup init done.");
-		
-		initListeners();
-		initCommands();
-		
 		System.out.println("System startup took: " + (System.currentTimeMillis() - TimeUtil.getStartTime("startup_time")) + "ms");
 	}
 	
-	
+	@Init
 	public static void initListeners(){
 		System.out.println("Start listener register");
+		int i = 0;
 		
 		if(!initListeners){
-			Set<Method> listeners = annoReflection.getMethodsAnnotatedWith(EventListener.class);
+			List<Method> listeners = ReflectionUtils.getMethods(EventListener.class);
 			
 			for(Method method : listeners){
-				if(!Modifier.isStatic(method.getModifiers())) continue;
-				
-				if(!method.isAccessible()){
-					method.setAccessible(true);
-				}
-				
 				Class[] cc = method.getParameterTypes();
 				
 				if(cc != null && cc.length == 1){
@@ -294,6 +324,7 @@ public class DiscordBotBase
 					}
 					
 					eventListeners.get(cc[0]).add(method);
+					i++;
 				}
 			}
 			
@@ -321,38 +352,52 @@ public class DiscordBotBase
 		});
 
 		
-		System.out.println("End listener register");
+		System.out.println("End listener register, found " + i + " listeners");
 	}
 	
+	@Init
 	public static void initCommands(){
 		System.out.println("Start command register");
 		int commands = CommandUtils.discordChatCommands.size();
 		
-		Set<Class<?>> commands1 = annoReflection.getTypesAnnotatedWith(DiscordCommand.class);
-		ArrayList<DiscordChatCommand> commandX = new ArrayList<>();
+		Set<Class<?>> commands1 = getReflection().getTypesAnnotatedWith(Command.class);
+		CopyOnWriteArrayList<DiscordCommand> commandX = new CopyOnWriteArrayList<>();
 		
 		for(Class c : commands1){
-			DiscordChatCommand cc = CommandUtils.registerCommand(c, WordUtils.uncapitalize(c.getSimpleName()));
+			DiscordCommand cc = CommandUtils.registerCommand(c, WordUtils.uncapitalize(c.getSimpleName()));
 			
 			if (cc != null) {
 				commandX.add(cc);
 			}
 		}
 		
-		Set<Class<?>> subCommands = annoReflection.getTypesAnnotatedWith(SubCommand.class);
+		Set<Class<?>> subCommands = getReflection().getTypesAnnotatedWith(SubCommand.class);
 		
-		for(Class c : subCommands){
-			SubCommand sc = (SubCommand) c.getAnnotation(SubCommand.class);
-			
-			if(!sc.debug() || debug) {
-				for (DiscordChatCommand cc : commandX) {
-					if (sc.parent() != null && sc.parent() == cc.getClass()) {
+		for(int i = 0; i < 5; i++) {
+			for (Class c : subCommands) {
+				SubCommand sc = (SubCommand) c.getAnnotation(SubCommand.class);
+				
+				for (DiscordCommand cc : commandX) {
+					if (sc.parent() != null && (sc.parent() == cc.getClass() || sc.parent().isAssignableFrom(cc.getClass()))) {
+						
 						try {
-							Constructor t = c.getDeclaredConstructor(DiscordChatCommand.class);
-							t.setAccessible(true);
+							DiscordCommand ck = (DiscordCommand) c.newInstance();
 							
-							cc.subCommands.add((DiscordSubCommand) t.newInstance(cc));
-						} catch (InstantiationException | IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+							boolean has = false;
+							
+							for(DiscordCommand base : cc.subCommands){
+								if(ck.getClass() == base.getClass()){
+									has = true;
+									break;
+								}
+							}
+							
+							if(!has) {
+								ck.baseCommand = cc;
+								commandX.add(ck);
+								cc.subCommands.add(ck);
+							}
+						} catch (InstantiationException | IllegalAccessException e) {
 							DiscordBotBase.handleException(e);
 						}
 					}
@@ -391,13 +436,6 @@ public class DiscordBotBase
 		System.out.println("waitForReady: waited for " + startup + "ms");
 	}
 	
-	protected static void registerListeners()
-	{
-		discordClient.getDispatcher().registerListener((IListener<DisconnectedEvent>) ( event ) -> LoggerUtil.log("Client disconnected for reason: " + event.getReason()));
-		discordClient.getDispatcher().registerListener((IListener<ReconnectFailureEvent>) ( event ) -> LoggerUtil.log("Client reconnect attempt num " + event.getCurrentAttempt() + " failed!"));
-		discordClient.getDispatcher().registerListener((IListener<GuildCreateEvent>) ( event ) -> LoggerUtil.log("Bot has joined server \"" + event.getGuild().getName() + "\""));
-	}
-	
 	public static void handleException( Throwable e )
 	{
 		LoggerUtil.exception(e);
@@ -434,8 +472,6 @@ public class DiscordBotBase
 			discordClient.logout();
 			
 			initBot();
-			
-			registerListeners();
 			initListeners();
 		}
 	}
@@ -472,7 +508,5 @@ public class DiscordBotBase
 	public static void setPermissionList( EnumSet<Permissions> permissionList )
 	{
 		DiscordBotBase.permissionList = permissionList;
-		inviteBuilder = new BotInviteBuilder(discordClient).withPermissions(permissionList);
-		System.out.println("Invite link: " + DiscordBotBase.inviteBuilder.build());
 	}
 }
