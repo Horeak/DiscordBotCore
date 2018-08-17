@@ -2,7 +2,7 @@ package DiscordBotCore.CommandFiles.Commands.Settings;
 
 import DiscordBotCore.CommandFiles.DiscordCommand;
 import DiscordBotCore.Main.ChatUtils;
-import DiscordBotCore.Main.PermissionUtils;
+import DiscordBotCore.Main.PermissionsUtils;
 import DiscordBotCore.Misc.Annotation.Command;
 import DiscordBotCore.Misc.Annotation.DataObject;
 import DiscordBotCore.Misc.Annotation.SubCommand;
@@ -204,7 +204,7 @@ public class IgnoredRolesCommand extends DiscordCommand
 		public void commandExecuted( IMessage message, String[] args )
 		{
 			List<IRole> roles = message.getGuild().getRoles();
-			ArrayList<IRole> roles1 = PermissionUtils.filterRoles(message.getGuild(), roles);
+			ArrayList<IRole> roles1 = PermissionsUtils.filterRoles(message.getGuild(), roles);
 			roles.removeAll(roles1);
 			
 			if (!IgnoredRolesCommand.getIgnoredRoles().containsKey(message.getGuild().getLongID())) {

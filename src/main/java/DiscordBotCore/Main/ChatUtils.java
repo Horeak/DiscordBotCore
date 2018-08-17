@@ -3,6 +3,7 @@ package DiscordBotCore.Main;
 import DiscordBotCore.Main.CommandHandeling.CommandUtils;
 import DiscordBotCore.Main.CommandHandeling.MessageObject;
 import DiscordBotCore.Misc.Requests;
+import com.google.common.base.Strings;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -24,6 +25,7 @@ import java.net.URL;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 @SuppressWarnings( { "unused", "SameParameterValue" } )
 public class ChatUtils
@@ -108,6 +110,7 @@ public class ChatUtils
 		return System.currentTimeMillis() + Utils.rand.nextLong();
 	}
 	
+	//TODO Schedule send message if shard isnt ready
 	public static IMessage sendMessage( IChannel chat, String message, MessageBuilder.Styles styles, boolean useTTS, boolean buffer )
 	{
 		if(chat == null){
@@ -213,7 +216,7 @@ public class ChatUtils
 						title = title.substring(0, (EmbedBuilder.AUTHOR_NAME_LIMIT - 4)) + "...";
 					}
 					
-					builder.appendDescription("[**" + title + "**](" + tg + ")\n");
+					builder.appendDescription("[" + title + "](" + tg + ")\n");
 				}
 				
 				if(descriptionEl.size() > 0){
@@ -336,10 +339,16 @@ public class ChatUtils
 			}
 		}
 		
+		if(object == null){
+			return null;
+		}
+		
 		final IMessage[] message = new IMessage[ 1 ];
 		IChannel finalChannel = channel;
 		RequestBuffer.request(() -> {
 			try {
+				if(finalChannel == null || object == null) return;
+				
 				message[ 0 ] = finalChannel.sendMessage(title, object, tts);
 			} catch (DiscordException | MissingPermissionsException e) {
 				DiscordBotBase.handleException(e);
@@ -382,7 +391,7 @@ public class ChatUtils
 	
 	public static  IMessage sendEmbed( IChannel chat,  String message )
 	{
-		return sendEmbed(chat, null, null, message);
+		return sendEmbed(chat, null, message);
 	}
 	
 	public static IVoiceChannel getConnectedBotChannel( IGuild guild )
@@ -406,6 +415,83 @@ public class ChatUtils
 		return null;
 	}
 	
+	public static String getList( String[] titles, List<String[]> values ){
+		CopyOnWriteArrayList<String[]> writeList = new CopyOnWriteArrayList<>();
+		writeList.addAll(values);
+		
+		Integer[] longest_value = new Integer[titles.length];
+		int longestLine = -1;
+		
+		
+		for(String[] ob : writeList){
+			if(ob.length != titles.length){
+				writeList.remove(ob);
+				continue;
+			}
+			
+			for(int i = 0; i < ob.length; i++){
+				if(longest_value[i] == null || ob[i].length() > longest_value[i]){
+					longest_value[i] = ob[i].length();
+				}
+			}
+		}
+		
+		for(int i = 0; i < titles.length; i++){
+			while(longest_value[i] < titles[i].length()){
+				longest_value[i] += 1;
+			}
+		}
+		
+		String split = "║", cross = "╬", line = "═";
+		
+		ArrayList<String> strings = new ArrayList<>();
+		
+		for (String[] object : values) {
+			StringBuilder text = new StringBuilder();
+			
+			for(int i = 0; i < object.length; i++) {
+				text.append(object[ i ]);
+				
+				if(i < (object.length - 1)) {
+					text.append(Strings.repeat(" ", longest_value[ i ] - object[ i ].length())).append(" " + split + " ");
+				}
+			}
+			strings.add(text.toString());
+		}
+		
+		for(String t : strings){
+			if(t.length() > longestLine){
+				longestLine = t.length();
+			}
+		}
+		
+		StringBuilder title = new StringBuilder();
+		for(int i = 0; i < titles.length; i++){
+			title.append(titles[ i ]);
+			
+			if(i < (titles.length - 1)) {
+				title.append(Strings.repeat(" ", longest_value[ i ] - titles[ i ].length())).append(" " + split + " ");
+			}
+		}
+		
+		StringBuilder builder1 = new StringBuilder();
+		builder1.append(title).append("\n");
+		
+		if(title.length() > 0) {
+			for (int i = 0; i < (longestLine > 0 ? longestLine : title.length()); i++) {
+				boolean isCross = title.length() > i && title.charAt(i) == split.toCharArray()[0];
+				builder1.append(isCross ? cross : line);
+			}
+		}
+		builder1.append("\n");
+		
+		
+		for (String t : strings) {
+			builder1.append(t).append("\n");
+		}
+		
+		return builder1.toString();
+	}
 }
 
 

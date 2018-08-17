@@ -1,7 +1,6 @@
 package DiscordBotCore.CommandFiles.Commands;
 
 import DiscordBotCore.CommandFiles.DiscordCommand;
-import DiscordBotCore.Extra.TimeUtil;
 import DiscordBotCore.Main.ChatUtils;
 import DiscordBotCore.Main.DiscordBotBase;
 import DiscordBotCore.Main.Utils;
@@ -10,6 +9,7 @@ import sx.blah.discord.handle.obj.IMessage;
 import sx.blah.discord.util.EmbedBuilder;
 
 import java.awt.*;
+import java.text.SimpleDateFormat;
 
 @Command
 public class BotStatusCommand extends DiscordCommand
@@ -36,6 +36,7 @@ public class BotStatusCommand extends DiscordCommand
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention(), getBuilder(message, args).build());
 	}
 	
+	private static SimpleDateFormat format = new SimpleDateFormat("dd/MM/YYYY");
 	
 	protected EmbedBuilder getBuilder(IMessage message, String[] args){
 		EmbedBuilder builder = new EmbedBuilder();
@@ -50,9 +51,12 @@ public class BotStatusCommand extends DiscordCommand
 		builder.withDescription("Current status of `" + DiscordBotBase.discordClient.getOurUser().getName() + "`");
 		
 		builder.appendField("Version", DiscordBotBase.getVersion(), true);
-		builder.appendField("Uptime", TimeUtil.getText("upTime", "<days> <hours> <mins> <secs>", false), true);
+		if(DiscordBotBase.getBuildDate() != null) builder.appendField("Version date", format.format(DiscordBotBase.getBuildDate()), true);
+		
+		builder.appendField("Uptime", DiscordBotBase.getUpTime(), true);
 		builder.appendField("Ping", Utils.getPing(message) + "ms", true);
 		builder.appendField("Servers", Integer.toString(DiscordBotBase.discordClient.getGuilds().size()), true);
+		builder.appendField("Users", Integer.toString(DiscordBotBase.discordClient.getUsers().size()), true);
 		
 		builder.withThumbnail(DiscordBotBase.discordClient.getOurUser().getAvatarURL());
 		

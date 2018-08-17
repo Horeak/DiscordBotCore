@@ -3,7 +3,7 @@ package DiscordBotCore.CommandFiles.Commands;
 import DiscordBotCore.CommandFiles.DiscordCommand;
 import DiscordBotCore.Main.ChatUtils;
 import DiscordBotCore.Main.CommandHandeling.CommandUtils;
-import DiscordBotCore.Main.PermissionUtils;
+import DiscordBotCore.Main.PermissionsUtils;
 import DiscordBotCore.Misc.Annotation.Command;
 import org.apache.commons.lang3.text.WordUtils;
 import sx.blah.discord.handle.obj.IMessage;
@@ -20,9 +20,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Command
 public class ListCommandsCommand extends DiscordCommand
 {
-	
-	//TODO Add a option to show commands avaliable for a specific role
-	
 	@Override
 	public String getCategory()
 	{
@@ -94,7 +91,7 @@ public class ListCommandsCommand extends DiscordCommand
 							
 							if(!message.getChannel().isPrivate() && message.getGuild() != null) {
 								if (CommandUtils.isCommandDisabled(message.getGuild(), command)){
-									if(PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), EnumSet.of(Permissions.ADMINISTRATOR))) {
+									if(PermissionsUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), EnumSet.of(Permissions.ADMINISTRATOR))) {
 										text = "~~" + text + "~~";
 									}else{
 										continue;

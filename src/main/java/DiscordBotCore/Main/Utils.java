@@ -1,10 +1,17 @@
 package DiscordBotCore.Main;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import sx.blah.discord.handle.obj.IMessage;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.util.*;
 import java.util.regex.Matcher;
@@ -30,15 +37,22 @@ public class Utils
 			return null;
 		}
 		
-		StringBuilder buf = new StringBuilder(value);
+		boolean t = false;
 		
-		if (buf.length() > length)
-		{
-			buf.setLength(length);
-			buf.append("...");
+		while (value.endsWith(" ") && value.length() > 0){
+			value = value.substring(0, value.length() - 1);
 		}
 		
-		return buf.toString();
+		if(value.length() >= length){
+			t = true;
+			value = value.substring(0, length - 4);
+		}
+		
+		if(value.endsWith(", ") || value.endsWith(". ")){
+			value = value.substring(0, value.length() - 2);
+		}
+		
+		return value + (t && !value.endsWith("..") ? "..." : "");
 	}
 	
 	public static List<String> extractUrls(String text)
@@ -192,5 +206,39 @@ public class Utils
 		}
 		
 		return builder.toString();
+	}
+	
+	public static Document getDocument( String url) throws IOException
+	{
+		java.net.URL u = new URL( url);
+		HttpURLConnection huc =  (HttpURLConnection)  u.openConnection ();
+		huc.setRequestMethod ("GET");
+		huc.connect () ;
+		int code = huc.getResponseCode();
+		
+		if(code == 404 || code == 503){
+			return null;
+		}
+		
+		URLConnection connection = new URL(url).openConnection();
+		connection.setRequestProperty("User-Agent", "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0)");
+		connection.setConnectTimeout(60000);
+		connection.setReadTimeout(60000);
+		connection.connect();
+		
+		InputStream stream = connection.getInputStream();
+		
+		String encoding = connection.getContentEncoding();
+		encoding = encoding == null ? "UTF-8" : encoding;
+		
+		if(stream != null){
+			String html = IOUtils.toString(stream, encoding);
+			
+			if(html != null && !html.isEmpty()) {
+				return Jsoup.parseBodyFragment(html);
+			}
+		}
+		
+		return null;
 	}
 }

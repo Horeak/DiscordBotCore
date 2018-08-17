@@ -4,7 +4,7 @@ import DiscordBotCore.CommandFiles.DiscordCommand;
 import DiscordBotCore.ICustomSettings;
 import DiscordBotCore.Main.ChatUtils;
 import DiscordBotCore.Main.CommandHandeling.CommandUtils;
-import DiscordBotCore.Main.PermissionUtils;
+import DiscordBotCore.Main.PermissionsUtils;
 import DiscordBotCore.Misc.Annotation.Command;
 import DiscordBotCore.Setting;
 import org.apache.commons.lang3.StringUtils;
@@ -48,7 +48,7 @@ public class HelpCommand extends DiscordCommand
 		
 		String commandName = String.join(" ", args);
 		
-		boolean hasAdmin = PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), EnumSet.of(Permissions.ADMINISTRATOR));
+		boolean hasAdmin = PermissionsUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), EnumSet.of(Permissions.ADMINISTRATOR));
 		
 		DiscordCommand command = CommandUtils.getDiscordCommand(commandName, message.getChannel(),  false, !hasAdmin);
 		
@@ -132,11 +132,11 @@ public class HelpCommand extends DiscordCommand
 			embedBuilder.appendField("Required Permissions", joinerPerms.toString(), false);
 		}
 		
-		if(PermissionUtils.getRequiredRole(command, message.getChannel()) != null){
-			embedBuilder.appendField("Required Role", PermissionUtils.getRequiredRole(command, message.getChannel()).mention(), false);
+		if(PermissionsUtils.getRequiredRole(command, message.getChannel()) != null){
+			embedBuilder.appendField("Required Role", PermissionsUtils.getRequiredRole(command, message.getChannel()).mention(), false);
 		}
 		
-		if(!message.getChannel().isPrivate() && PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), EnumSet.of(Permissions.ADMINISTRATOR))) {
+		if(!message.getChannel().isPrivate() && PermissionsUtils.hasPermissions(message.getAuthor(), message.getGuild(), EnumSet.of(Permissions.ADMINISTRATOR))) {
 			if(command.getFallbackPermissions() != null && command.getFallbackPermissions().size() > 0){
 				StringJoiner joinerFallbackPerms = new StringJoiner(",");
 				command.getFallbackPermissions().stream().map(Enum::name).forEach((u) -> joinerFallbackPerms.add(WordUtils.capitalize(u.toLowerCase().replace("_", " "))));

@@ -16,7 +16,6 @@ import java.util.EnumSet;
 import java.util.StringJoiner;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-//TODO This doesn't check disabled commands
 @Command
 public class RoleCommandsCheck extends DiscordCommand
 {

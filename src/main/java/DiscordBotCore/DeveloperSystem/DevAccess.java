@@ -14,7 +14,6 @@ public class DevAccess
 	@DataObject(file_path = "devs.json", name = "devList")
 	public static ConcurrentHashMap<Long, DevUserObject> devList = new ConcurrentHashMap<>();
 	
-
 	public static void addDev(Long id){
 		if(!isDev(id) || isOwner(id) && !devList.containsKey(id)) {
 			devList.put(id, new DevUserObject());

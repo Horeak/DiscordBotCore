@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
 
-public class PermissionUtils
+public class PermissionsUtils
 {
 	private static boolean overRide(IUser user){
 		try {

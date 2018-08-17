@@ -1,7 +1,7 @@
 package DiscordBotCore.CommandFiles;
 
 import DiscordBotCore.Main.DiscordBotBase;
-import DiscordBotCore.Main.PermissionUtils;
+import DiscordBotCore.Main.PermissionsUtils;
 import DiscordBotCore.Main.ServerSettings;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IMessage;
@@ -62,37 +62,37 @@ public abstract class DiscordCommand
 	public boolean hasPermissions( IMessage message, String[] args )
 	{
 		if(baseCommand != null){
-			if((PermissionUtils.getRequiredRole(this, message.getChannel()) == null) && (getRequiredPermissions() == null || getRequiredPermissions().size() == 0)) {
+			if((PermissionsUtils.getRequiredRole(this, message.getChannel()) == null) && (getRequiredPermissions() == null || getRequiredPermissions().size() == 0)) {
 				return baseCommand.hasPermissions(message, args);
 			}
 		}
 		
-		if(PermissionUtils.getRequiredRole(this, message.getChannel()) != null) {
-			return message.getChannel().isPrivate() || PermissionUtils.hasRole(message.getAuthor(), message.getGuild(), PermissionUtils.getRequiredRole(this, message.getChannel()), true);
+		if(PermissionsUtils.getRequiredRole(this, message.getChannel()) != null) {
+			return message.getChannel().isPrivate() || PermissionsUtils.hasRole(message.getAuthor(), message.getGuild(), PermissionsUtils.getRequiredRole(this, message.getChannel()), true);
 		}
 		
 		if(getFallbackPermissions() != null) {
 			if (getRequiredPermissions() == null || getRequiredPermissions().size() <= 0) {
-				return PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), getFallbackPermissions(), useChannelPermission());
+				return PermissionsUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), getFallbackPermissions(), useChannelPermission());
 			}
 		}
 		
-		return PermissionUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), getRequiredPermissions(), useChannelPermission());
+		return PermissionsUtils.hasPermissions(message.getAuthor(), message.getGuild(), message.getChannel(), getRequiredPermissions(), useChannelPermission());
 	}
 	
 	public boolean hasPermissions( IMessage message, IRole role )
 	{
 		if(baseCommand != null){
-			if((PermissionUtils.getRequiredRole(this, message.getChannel()) == null) && (getRequiredPermissions() == null || getRequiredPermissions().size() == 0)) {
+			if((PermissionsUtils.getRequiredRole(this, message.getChannel()) == null) && (getRequiredPermissions() == null || getRequiredPermissions().size() == 0)) {
 				return baseCommand.hasPermissions(message, role);
 			}
 		}
 		
-		if(PermissionUtils.getRequiredRole(this, message.getChannel()) != null) {
+		if(PermissionsUtils.getRequiredRole(this, message.getChannel()) != null) {
 			if(message.getChannel().isPrivate()){
 				return true;
 			}else{
-				IRole role1 = PermissionUtils.getRequiredRole(this, message.getChannel());
+				IRole role1 = PermissionsUtils.getRequiredRole(this, message.getChannel());
 				
 				if(role.getLongID() == role1.getLongID()){
 					return true;
@@ -106,11 +106,11 @@ public abstract class DiscordCommand
 		
 		if(getFallbackPermissions() != null) {
 			if (getRequiredPermissions() == null || getRequiredPermissions().size() <= 0) {
-				return PermissionUtils.hasPermissions(role, getFallbackPermissions());
+				return PermissionsUtils.hasPermissions(role, getFallbackPermissions());
 			}
 		}
 		
-		return PermissionUtils.hasPermissions(role, getRequiredPermissions());
+		return PermissionsUtils.hasPermissions(role, getRequiredPermissions());
 	}
 
 	public String getCommandSign( IChannel channel )

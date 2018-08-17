@@ -9,12 +9,15 @@ import DiscordBotCore.Main.CustomEvents.CommandFailedExecuteEvent;
 import DiscordBotCore.Main.CustomEvents.CommandRegisterEvent;
 import DiscordBotCore.Main.CustomEvents.CommandRemoveEvent;
 import DiscordBotCore.Main.DiscordBotBase;
-import DiscordBotCore.Main.PermissionUtils;
+import DiscordBotCore.Main.PermissionsUtils;
 import DiscordBotCore.Misc.Annotation.DataObject;
+import org.apache.commons.lang3.text.WordUtils;
 import sx.blah.discord.handle.impl.obj.Message;
 import sx.blah.discord.handle.obj.IChannel;
 import sx.blah.discord.handle.obj.IGuild;
 import sx.blah.discord.handle.obj.IMessage;
+import sx.blah.discord.handle.obj.Permissions;
+import sx.blah.discord.util.MissingPermissionsException;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
@@ -25,6 +28,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class CommandUtils
 {
 	public static ConcurrentHashMap<String, DiscordCommand> discordChatCommands = new ConcurrentHashMap<>(); //All commands added to the program
+	public static CopyOnWriteArrayList<DiscordCommand> subCommands = new CopyOnWriteArrayList<>(); //All commands added to the program
+	
 	public static ConcurrentHashMap<String, CopyOnWriteArrayList<String>> commandCategories = new ConcurrentHashMap<>();
 	public static ConcurrentHashMap<String, String> commandCategory = new ConcurrentHashMap<>();
 	
@@ -55,7 +60,28 @@ public class CommandUtils
 						command.commandExecuted(m1, args);
 						DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandExecutedEvent(command, m1, Thread.currentThread()));
 					}catch (Exception e){
-						DiscordBotBase.handleException(e);
+						if(e instanceof MissingPermissionsException){
+							MissingPermissionsException exception = (MissingPermissionsException)e;
+							
+							IChannel channel = null;
+							
+							if(m1.getChannel().isPrivate()){
+								channel = m1.getAuthor().getOrCreatePMChannel();
+							}else{
+								channel = m1.getGuild().getOwner().getOrCreatePMChannel();
+							}
+							
+							StringJoiner joiner = new StringJoiner(", ");
+							
+							for(Permissions perm : exception.getMissingPermissions()){
+								joiner.add(WordUtils.capitalize("`" + perm.name().toLowerCase().replace("_", " ")) + "`");
+							}
+							
+							ChatUtils.sendMessage(channel, "A command has errored because the bot lacks the following permissions: " + joiner.toString() + (!m1.getChannel().isPrivate() ? ", On the following server: " + m1.getGuild().getName() : ""));
+						}else {
+							DiscordBotBase.handleException(e);
+						}
+						
 						DiscordBotBase.discordClient.getDispatcher().dispatch(new CommandFailedExecuteEvent(command, m1, Thread.currentThread()));//DiscordCommand failed from unknown error. Sending it to botBase
 					}
 					
@@ -64,9 +90,9 @@ public class CommandUtils
 					ChatUtils.sendMessage(m1.getChannel(), "*Could not execute command: " + m1.getContent() + "*");
 				}
 			}else{
-				if(PermissionUtils.getRequiredRole(command, m1.getChannel()) != null){
-					if(!PermissionUtils.hasRole(m1.getAuthor(), m1.getGuild(), PermissionUtils.getRequiredRole(command, m1.getChannel()), true)){
-						ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You must be ` " + PermissionUtils.getRequiredRole(command, m1.getChannel()).getName() + " ` or above to use this command!");
+				if(PermissionsUtils.getRequiredRole(command, m1.getChannel()) != null){
+					if(!PermissionsUtils.hasRole(m1.getAuthor(), m1.getGuild(), PermissionsUtils.getRequiredRole(command, m1.getChannel()), true)){
+						ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You must be ` " + PermissionsUtils.getRequiredRole(command, m1.getChannel()).getName() + " ` or above to use this command!");
 					}
 				}else {
 					ChatUtils.sendMessage(m1.getChannel(), m1.getAuthor().mention() + " You do not have the required permissions to use this command!");
@@ -178,7 +204,27 @@ public class CommandUtils
 		return message1;
 	}
 	
-	private static DiscordCommand getCommand( String text, IChannel chat, boolean checkSign, boolean checkEnabled )
+	public static <T extends DiscordCommand> T getCommand(Class<T> cc){
+		for(DiscordCommand cc1 : discordChatCommands.values()){
+			if(cc1 != null){
+				if(cc1.getClass() == cc){
+					return (T) cc1;
+				}
+			}
+		}
+		
+		for(DiscordCommand cc1 : subCommands){
+			if(cc1 != null){
+				if(cc1.getClass() == cc){
+					return (T) cc1;
+				}
+			}
+		}
+		
+		return null;
+	}
+	
+	public static DiscordCommand getCommand( String text, IChannel chat, boolean checkSign, boolean checkEnabled )
 	{
 		if (chat == null || text == null) {
 			return null;
@@ -272,6 +318,7 @@ public class CommandUtils
 		return getDiscordCommand(text, channel, true, checkEnabled);
 	}
 	
+	//TODO It only checks first command prefix for sub commands!
 	public static DiscordCommand getDiscordCommand( String text, IChannel channel){
 		return getDiscordCommand(text, channel, true);
 	}

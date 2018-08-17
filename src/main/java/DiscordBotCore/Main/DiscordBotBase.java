@@ -3,7 +3,6 @@ package DiscordBotCore.Main;
 import DiscordBotCore.CommandFiles.DiscordCommand;
 import DiscordBotCore.Extra.FileGetter;
 import DiscordBotCore.Extra.FileUtil;
-import DiscordBotCore.Extra.TimeUtil;
 import DiscordBotCore.Main.CommandHandeling.CommandUtils;
 import DiscordBotCore.Main.CommandHandeling.ICommandFormatter;
 import DiscordBotCore.Main.CustomEvents.BotCloseEvent;
@@ -39,8 +38,11 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
@@ -80,21 +82,27 @@ public class DiscordBotBase
 	public static boolean devMode = false;
 	private static CstReflections annoReflection;
 	
+	private static SimpleDateFormat format = new SimpleDateFormat("yyyy/MM/dd HH:mm");
+	private static Date buildDate;
+	
 	@VariableState( variable_class = "DiscordBotCore.Main.DiscordBotBase", variable_name = "confirmation_check")
 	@DataObject(file_path = "confirmation.json", name = "run_confirmation")
 	private static boolean confirmation = false;
 	private static boolean confirmation_check = true;
 	
+	private static String filePath;
+	
+	public static final Long startTime = System.currentTimeMillis();
+	
 	public static void main(String[] args)
 	{
-		TimeUtil.startTimeTaker("upTime");
-		TimeUtil.startTimeTaker("startup_time");
-		
 		DLLCleaner.clean();
 		System.setProperty("java.awt.headless", "true");
 		
 		debug = System.getProperty("debugMode") != null;
 		modules = System.getProperty("modules") != null;
+		
+		filePath = System.getProperty("filePath");
 		
 		System.out.println("debug: " + debug);
 		System.out.println("modules: " + modules);
@@ -106,25 +114,8 @@ public class DiscordBotBase
 //		Reflections.log = null;
 		
 		try{
-			File fe = new File(DiscordBotBase.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-			jarFile = fe.exists() && fe.isFile();
-			
+			initReflection(true);
 			System.out.println("jarFile: " + jarFile);
-			
-			URL url = new URL("file:" + (jarFile ? fe.getPath() : System.getProperty("user.dir").replace("\\", "/")));
-			Predicate<String> filter = new FilterBuilder().include("(?i)Discord.*").include("(?i).*Discord.*");
-			
-			launchDir = url;
-			preInit(url, filter);
-			
-			ConfigurationBuilder builder = new ConfigurationBuilder();
-			
-			builder.setInputsFilter(filter);
-			builder.setUrls(url);
-			builder.forPackages(DiscordBotBase.class.getPackage().getName());
-			builder.setScanners(new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new MethodAnnotationsScanner(), new SubTypesScanner());
-			
-			annoReflection = new CstReflections(builder);
 		}catch (IOException | URISyntaxException e){
 			DiscordBotBase.handleException(e);
 		}
@@ -144,6 +135,30 @@ public class DiscordBotBase
 		}
 	}
 	
+	public static void initReflection(boolean preinit) throws URISyntaxException, MalformedURLException
+	{
+		File fe = new File(DiscordBotBase.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+		jarFile = fe.exists() && fe.isFile();
+		
+		URL url = new URL("file:" + (jarFile ? fe.getPath() : System.getProperty("user.dir").replace("\\", "/")));
+		Predicate<String> filter = new FilterBuilder().include("(?i)(Discord)").includePackage("(?i)(Discord)");
+		
+		launchDir = url;
+		
+		if(preinit) {
+			preInit(url, filter);
+		}
+		
+		ConfigurationBuilder builder = new ConfigurationBuilder();
+		
+		builder.setInputsFilter(filter);
+		builder.setUrls(url);
+		builder.forPackages(DiscordBotBase.class.getPackage().getName());
+		builder.setScanners(new FieldAnnotationsScanner(), new TypeAnnotationsScanner(), new MethodAnnotationsScanner(), new SubTypesScanner());
+		
+		annoReflection = new CstReflections(builder);
+	}
+	
 	private static void initFile() throws IOException
 	{
 		String fileName = debug ? "build.debug.properties" : "build.properties";
@@ -152,7 +167,15 @@ public class DiscordBotBase
 		baseFilePath = new File(System.getProperty("user.dir") + "/");
 		
 		FileUtil.initFile(infoFile, INFO_FILE_TAG);
-		FilePath = FileGetter.getFolder(baseFilePath.getPath() + (!jarFile ? "/../../run/" : "") + FileUtil.getValue(INFO_FILE_TAG, "file_path")).getCanonicalPath();
+		String folder = FileUtil.getValue(INFO_FILE_TAG, "file_path");
+		
+		String fe = filePath == null ? baseFilePath.getPath() : filePath;
+		
+		if(filePath != null){
+			System.out.println("Custom filepath given: " + filePath);
+		}
+		
+		FilePath = FileGetter.getFolder(fe + folder).getCanonicalPath();
 		tempFolder = FileGetter.getFolder(DiscordBotBase.FilePath + "/tmp/");
 		
 		LoggerUtil.activate();
@@ -162,7 +185,7 @@ public class DiscordBotBase
 		System.out.println("File init done.");
 	}
 	
-
+	
 	private static void initVersion() throws IOException
 	{
 		File versionFile = FileUtil.getFileFromStream(ClassLoader.getSystemResourceAsStream(FileUtil.getValue(INFO_FILE_TAG, "version_file")), ".properties");
@@ -179,6 +202,23 @@ public class DiscordBotBase
 			while (m.find()) {
 				String value = FileUtil.getValue(VERSION_FILE_TAG, m.group(2));
 				versionFormat = versionFormat.replace(m.group(), value);
+			}
+			
+			String buildDateSt = FileUtil.getValue(VERSION_FILE_TAG, "build_date");
+			
+			if(buildDateSt != null){
+				try {
+					Date dt = format.parse(buildDateSt);
+					
+					if(dt != null){
+						buildDate = dt;
+						
+						System.out.println("Found build date: " + dt);
+					}
+					
+				} catch (ParseException e) {
+					DiscordBotBase.handleException(e);
+				}
 			}
 			
 			version = versionFormat;
@@ -305,7 +345,7 @@ public class DiscordBotBase
 		Runtime.getRuntime().addShutdownHook(new Thread(DiscordBotBase::onBotClose));
 		
 		System.out.println("Startup init done.");
-		System.out.println("System startup took: " + (System.currentTimeMillis() - TimeUtil.getStartTime("startup_time")) + "ms");
+		System.out.println("System startup took: " + getUpTime());
 	}
 	
 	@Init
@@ -362,6 +402,8 @@ public class DiscordBotBase
 		int commands = CommandUtils.discordChatCommands.size();
 		
 		Set<Class<?>> commands1 = getReflection().getTypesAnnotatedWith(Command.class);
+		Set<Class<?>> subCommands = getReflection().getTypesAnnotatedWith(SubCommand.class);
+		
 		CopyOnWriteArrayList<DiscordCommand> commandX = new CopyOnWriteArrayList<>();
 		
 		for(Class c : commands1){
@@ -371,8 +413,6 @@ public class DiscordBotBase
 				commandX.add(cc);
 			}
 		}
-		
-		Set<Class<?>> subCommands = getReflection().getTypesAnnotatedWith(SubCommand.class);
 		
 		for(int i = 0; i < 5; i++) {
 			for (Class c : subCommands) {
@@ -397,6 +437,10 @@ public class DiscordBotBase
 								ck.baseCommand = cc;
 								commandX.add(ck);
 								cc.subCommands.add(ck);
+								
+								if(!CommandUtils.subCommands.contains(ck)){
+									CommandUtils.subCommands.add(ck);
+								}
 								
 								for(Method method : cc.getClass().getMethods()){
 									if(method.isAnnotationPresent(ModifySubCommands.class)){
@@ -423,6 +467,38 @@ public class DiscordBotBase
 	public static String getGuilds(){
 		StringJoiner joiner = new StringJoiner(", ");
 		DiscordBotBase.discordClient.getGuilds().forEach(( g ) -> joiner.add(g.getName()));
+		
+		return joiner.toString();
+	}
+	
+	public static String getUpTime(){
+		StringJoiner joiner = new StringJoiner(" ");
+		Long tt = System.currentTimeMillis();
+		Long time = tt - startTime;
+		
+		if(TimeUnit.DAYS.convert(time, TimeUnit.MILLISECONDS) > 0){
+			Long tg = TimeUnit.DAYS.convert(time, TimeUnit.MILLISECONDS);
+			time -= TimeUnit.MILLISECONDS.convert(tg, TimeUnit.DAYS);
+			joiner.add(tg + "d");
+		}
+		
+		if(TimeUnit.HOURS.convert(time, TimeUnit.MILLISECONDS) > 0){
+			Long tg = TimeUnit.HOURS.convert(time, TimeUnit.MILLISECONDS);
+			time -= TimeUnit.MILLISECONDS.convert(tg, TimeUnit.HOURS);
+			joiner.add(tg + "h");
+		}
+		
+		if(TimeUnit.MINUTES.convert(time, TimeUnit.MILLISECONDS) > 0){
+			Long tg = TimeUnit.MINUTES.convert(time, TimeUnit.MILLISECONDS);
+			time -= TimeUnit.MILLISECONDS.convert(tg, TimeUnit.MINUTES);
+			joiner.add(tg + "m");
+		}
+		
+		if(TimeUnit.SECONDS.convert(time, TimeUnit.MILLISECONDS) > 0){
+			Long tg = TimeUnit.SECONDS.convert(time, TimeUnit.MILLISECONDS);
+			time -= TimeUnit.MILLISECONDS.convert(tg, TimeUnit.SECONDS);
+			joiner.add(tg + "s");
+		}
 		
 		return joiner.toString();
 	}
@@ -505,6 +581,11 @@ public class DiscordBotBase
 	
 	public static String getVersion(){
 		return version;
+	}
+	
+	public static Date getBuildDate()
+	{
+		return buildDate;
 	}
 	
 	public static String getCommandSign(){
