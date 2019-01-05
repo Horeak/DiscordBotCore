@@ -162,7 +162,9 @@ public class CommandInputEvents
 		}
 		
 		if(command != null){
-			startTimer(message);
+			if(!command.longCommandTime()) {
+				startTimer(message);
+			}
 		}
 		
 		if(DiscordBotBase.devMode && !DevAccess.isDev(message.getAuthor())) return;
@@ -200,7 +202,7 @@ public class CommandInputEvents
 	public static class CommandHandlingThread extends Thread{
 		public CommandHandlingThread( int num)
 		{
-			this.setName("[Message handling thread][Num:" + num + "]");
+			this.setName("Message-handling-thread-" + num);
 		}
 		public CopyOnWriteArrayList<MessageObject> messages = new CopyOnWriteArrayList<>();
 		

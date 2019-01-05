@@ -13,6 +13,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
+import java.time.Instant;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -22,20 +23,26 @@ public class Utils
 	public static Random rand = new Random();
 	
 	public static long getPing( IMessage message){
-		Long t = System.currentTimeMillis() - message.getCreationDate().toEpochMilli();
+		Instant time = message.getEditedTimestamp().orElse(message.getCreationDate());
+		return Math.abs(System.currentTimeMillis() - time.toEpochMilli());
+	}
+	
+	public static long getWebResponse(){
+		long startTime = System.currentTimeMillis();
 		
-		//I have no idea why this is an issue but with latest D4j it resulted in a negative value at times
-		if(t < 0){
-			t *= -1;
-		}
-		return t;
+		try {
+			java.net.URL u = new URL("https://discordapp.com/");
+			HttpURLConnection huc = (HttpURLConnection) u.openConnection();
+			huc.setRequestMethod("GET");
+			huc.connect();
+		}catch (IOException ignored){ }
+		
+		return System.currentTimeMillis() - startTime;
 	}
 	
 	public static String limitString(String value, int length)
 	{
-		if(value == null){
-			return null;
-		}
+		if(value == null) return null;
 		
 		boolean t = false;
 		
@@ -61,15 +68,7 @@ public class Utils
 		String urlRegex = "((https?|ftp|gopher|telnet|file):((//)|(\\\\))+[\\w\\d:#@%/;$()~_?\\+-=\\\\\\.&]*)";
 		Pattern pattern = Pattern.compile(urlRegex, Pattern.CASE_INSENSITIVE);
 		Matcher urlMatcher = pattern.matcher(text);
-		
-		int t = 0;
-		
-		while (urlMatcher.find() && t < 10)
-		{
-			containedUrls.add(text.substring(urlMatcher.start(0), urlMatcher.end(0)));
-			t++;
-		}
-		
+		while (urlMatcher.find()) containedUrls.add(text.substring(urlMatcher.start(0), urlMatcher.end(0)));
 		return containedUrls;
 	}
 	
@@ -131,7 +130,6 @@ public class Utils
 	
 	public static double compareStrings( String stringA, String stringB )
 	{
-		
 		return StringUtils.getLevenshteinDistance(stringA, stringB);
 	}
 	

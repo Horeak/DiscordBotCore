@@ -42,6 +42,8 @@ public class CommandDataFormat implements ICommandFormatter
 							hasText = true;
 						}
 						
+						//TODO Make it change command prefix if the guild format is added
+						
 						Object tk = ObjectConverter.convert(t[1], field.getType());
 						CommandUtils.setMessageValue(message, field.getName(), tk);
 					}else{

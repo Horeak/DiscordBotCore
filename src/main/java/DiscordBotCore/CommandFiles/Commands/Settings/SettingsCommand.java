@@ -59,7 +59,7 @@ public class SettingsCommand extends DiscordCommand
 				String t = ((DiscordCommand)command).getCommandSign(message.getChannel()) + command.commandPrefix();
 				
 				if(!replaces.contains(t)) {
-					text = text.replaceFirst(t, "");
+					text = text.replaceFirst("(?i)" + t, "");
 					replaces.add(t);
 					replaces.add(command.commandPrefix());
 				}
@@ -68,7 +68,7 @@ public class SettingsCommand extends DiscordCommand
 				String t = (command.baseCommand).getCommandSign(message.getChannel()) + command.commandPrefix();
 				
 				if(replaces.contains(t)) {
-					text = text.replaceFirst(t, "");
+					text = text.replaceFirst("(?i)" + t, "");
 					replaces.add(t);
 					replaces.add(command.commandPrefix());
 				}
@@ -80,7 +80,7 @@ public class SettingsCommand extends DiscordCommand
 			text = text.substring(1);
 		}
 		
-		if(command != null && command instanceof ICustomSettings){
+		if(command instanceof ICustomSettings){
 			ICustomSettings settings = (ICustomSettings)command;
 			
 			if(settings != null) {

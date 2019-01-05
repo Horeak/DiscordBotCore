@@ -15,22 +15,22 @@ public class ReflectionUtils
 {
 	public static void invokeMethods( Class c )
 	{
-		try {
-			List<Method> methods = getMethods(c);
-			System.out.println("Found " + methods.size() + " " + c.getSimpleName() + " method" + (methods.size() > 1 ? "s" : "") + "!");
-			
-			for (Method ob : methods) {
+		List<Method> methods = getMethods(c);
+		System.out.println("Found " + methods.size() + " " + c.getSimpleName() + " method" + (methods.size() > 1 ? "s" : "") + "!");
+		
+		for (Method ob : methods) {
+			try {
 				ob.invoke(null);
-			}
-		} catch (IllegalAccessException | InvocationTargetException e1) {
-			if(e1 instanceof InvocationTargetException){
-				InvocationTargetException e2 = (InvocationTargetException)e1;
-				
-				if(e2 != null && e2.getCause() != null) {
-					DiscordBotBase.handleException(e2.getCause());
+			}catch (Exception e1){
+				if(e1 instanceof InvocationTargetException){
+					InvocationTargetException e2 = (InvocationTargetException)e1;
+					
+					if(e2 != null && e2.getCause() != null) {
+						DiscordBotBase.handleException(e2.getCause());
+					}
+				}else {
+					DiscordBotBase.handleException(e1);
 				}
-			}else {
-				DiscordBotBase.handleException(e1);
 			}
 		}
 	}

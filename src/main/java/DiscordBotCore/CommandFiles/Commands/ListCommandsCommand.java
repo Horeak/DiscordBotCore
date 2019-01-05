@@ -48,6 +48,10 @@ public class ListCommandsCommand extends DiscordCommand
 			commands.get(key).add(ent.getValue());
 		}
 		
+		for (Map.Entry<String, CopyOnWriteArrayList<DiscordCommand>> ent : commands.entrySet()) {
+			ent.getValue().sort((c1, c2) -> c1.commandPrefix().compareTo(c2.commandPrefix()));
+		}
+		
 		ArrayList<EmbedBuilder> builderArrayList = new ArrayList<>();
 		builderArrayList.add(new EmbedBuilder());
 		builderArrayList.get(0).withColor(message.getChannel().isPrivate() ? Color.darkGray : message.getAuthor().getColorForGuild(message.getGuild()));

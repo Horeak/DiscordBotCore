@@ -138,7 +138,7 @@ public class HelpCommand extends DiscordCommand
 		
 		if(!message.getChannel().isPrivate() && PermissionsUtils.hasPermissions(message.getAuthor(), message.getGuild(), EnumSet.of(Permissions.ADMINISTRATOR))) {
 			if(command.getFallbackPermissions() != null && command.getFallbackPermissions().size() > 0){
-				StringJoiner joinerFallbackPerms = new StringJoiner(",");
+				StringJoiner joinerFallbackPerms = new StringJoiner(", ");
 				command.getFallbackPermissions().stream().map(Enum::name).forEach((u) -> joinerFallbackPerms.add(WordUtils.capitalize(u.toLowerCase().replace("_", " "))));
 				
 				embedBuilder.appendField("Fallback Permissions", joinerFallbackPerms.toString(), false);

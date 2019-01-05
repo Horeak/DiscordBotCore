@@ -38,6 +38,8 @@ public abstract class DiscordCommand
 	public boolean canAssignRole(){ return true; }
 
 	public boolean canBeDisabled(){ return true; }
+	
+	public boolean longCommandTime(){return false;}
 
 
 	//Is command avaliable in private chats with the bot

@@ -1,141 +1,191 @@
 package DiscordBotCore.Misc;
 
 import DiscordBotCore.Main.Utils;
+import org.joda.time.*;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.StringJoiner;
 import java.util.concurrent.TimeUnit;
 
 public class TimeParserUtil
 {
-	public static TimeObject getTime( String[] input )
-	{
-		long weeks = 0, days = 0, hours = 0, mins = 0, seconds = 0;
-		long delay = 0;
+	private static String[] types = new String[]{"y", "w", "d", "h", "m", "s"};
+	
+	public static ArrayList<String> getTimeArguments(String[] strings){
+		ArrayList<String> list = new ArrayList<>();
 		
-		ArrayList<String> replaces = new ArrayList<>();
-		StringJoiner joiner = new StringJoiner(" ");
-		
-		
-		for (String t : input) {
-			t = t.toLowerCase();
+		for(String t : strings){
+			String type = t.substring(t.length() - 1).toLowerCase();
+			String numT = t.substring(0, t.length() - 1);
 			
-			if (t.endsWith("w")) {
-				t = t.replace("w", "");
-				if (Utils.isInteger(t)) {
-					weeks = Integer.parseInt(t);
-					replaces.add(t + "w");
-					joiner.add(t + " week" + (Integer.parseInt(t) > 1 ? "s" : ""));
-				}
-				
-			} else if (t.endsWith("d")) {
-				t = t.replace("d", "");
-				if (Utils.isInteger(t)) {
-					days = Integer.parseInt(t);
-					replaces.add(t + "d");
-					joiner.add(t + " day" + (Integer.parseInt(t) > 1 ? "s" : ""));
-				}
-				
-			} else if (t.endsWith("h")) {
-				t = t.replace("h", "");
-				if (Utils.isInteger(t)) {
-					hours = Integer.parseInt(t);
-					replaces.add(t + "h");
-					joiner.add(t + " hour" + (Integer.parseInt(t) > 1 ? "s" : ""));
-				}
-				
-			} else if (t.endsWith("m")) {
-				t = t.replace("m", "");
-				if (Utils.isInteger(t)) {
-					mins = Integer.parseInt(t);
-					replaces.add(t + "m");
-					joiner.add(t + " minute" + (Integer.parseInt(t) > 1 ? "s" : ""));
-				}
-				
-			} else if (t.endsWith("s")) {
-				t = t.replace("s", "");
-				if (Utils.isInteger(t)) {
-					seconds = Integer.parseInt(t);
-					replaces.add(t + "s");
-					joiner.add(t + " second" + (Integer.parseInt(t) > 1 ? "s" : ""));
+			if(!Utils.isInteger(numT)){
+				continue;
+			}
+			
+			for(String tg : types){
+				if(type.equalsIgnoreCase(tg)){
+					list.add(t);
+					break;
 				}
 			}
 		}
 		
-		delay += TimeUnit.MILLISECONDS.convert(weeks * 7, TimeUnit.DAYS);
-		delay += TimeUnit.MILLISECONDS.convert(days, TimeUnit.DAYS);
-		delay += TimeUnit.MILLISECONDS.convert(hours, TimeUnit.HOURS);
-		delay += TimeUnit.MILLISECONDS.convert(mins, TimeUnit.MINUTES);
-		delay += TimeUnit.MILLISECONDS.convert(seconds, TimeUnit.SECONDS);
-		
-		return new TimeObject(delay, joiner.toString(), replaces);
+		return list;
 	}
 	
-	public static String getTimeText( long millis, boolean weeksB, boolean daysB, boolean hoursB, boolean minsB, boolean seconds )
+	public static long getDaysTime( String[] input )
 	{
-		long weeks = TimeUnit.MILLISECONDS.toDays(millis) / 7;
-		long days = TimeUnit.MILLISECONDS.toDays(millis) - (weeks * 7);
-		long hours = TimeUnit.MILLISECONDS.toHours(millis) - (TimeUnit.DAYS.toHours(TimeUnit.MILLISECONDS.toDays(millis)));
-		long min = TimeUnit.MILLISECONDS.toMinutes(millis) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis));
-		long sec = TimeUnit.MILLISECONDS.toSeconds(millis) - TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis));
+		long delay = 0;
+		
+		for (String t : input) {
+			String type = t.substring(t.length() - 1).toLowerCase();
+			String numT = t.substring(0, t.length() - 1);
+			
+			if(!Utils.isInteger(numT)){
+				continue;
+			}
+			
+			int num = Integer.parseInt(numT);
+			
+			switch(type){
+				case "y":
+					delay += TimeUnit.MILLISECONDS.convert(num * 365, TimeUnit.DAYS);
+					break;
+				
+				case "m":
+					delay += TimeUnit.MILLISECONDS.convert(num * 30, TimeUnit.DAYS);
+					break;
+				
+				default:
+					delay = getDelay(delay, type, num);
+			}
+		}
+		
+		return delay;
+	}
+	
+	public static long getTime( String[] input )
+	{
+		long delay = 0;
+		
+		for (String t : input) {
+			String type = t.substring(t.length() - 1).toLowerCase();
+			String numT = t.substring(0, t.length() - 1);
+			
+			if(!Utils.isInteger(numT)){
+				continue;
+			}
+			int num = Integer.parseInt(numT);
+			delay = getDelay(delay, type, num);
+		}
+		
+		return delay;
+	}
+	
+	protected static long getDelay( long delay, String type, int num )
+	{
+		switch(type){
+			case "w":
+				delay += Weeks.weeks(num).toStandardDuration().getMillis();
+				break;
+				
+			case "d":
+				delay += Days.days(num).toStandardDuration().getMillis();
+				break;
+				
+			case "h":
+				delay += Hours.hours(num).toStandardDuration().getMillis();
+				break;
+				
+			case "m":
+				delay += Minutes.minutes(num).toStandardDuration().getMillis();
+				break;
+				
+			case "s":
+				delay += Seconds.seconds(num).toStandardDuration().getMillis();
+				break;
+		}
+		
+		return delay;
+	}
+	
+	public static String getTimeText(String[] strings){
+		return getTimeText(getTime(strings));
+	}
+	
+	//Millis is milliseconds from base time, if it gives 1970 add System.currentTimeMillis() to input millis
+	public static String getTimeText( Date date, boolean yearsB, boolean monthsB, boolean weeksB, boolean daysB, boolean hoursB, boolean minsB, boolean secondsB )
+	{
+		long s1 = date.getTime() > System.currentTimeMillis() ? System.currentTimeMillis() : date.getTime();
+		long s2 = System.currentTimeMillis() > date.getTime() ? System.currentTimeMillis() : date.getTime();
+		
+		Interval interval = new Interval(Instant.ofEpochMilli(s1), Instant.ofEpochMilli(s2));
+		Period period = interval.toPeriod();
+		
+		int years   = period.getYears();
+		int months  = period.getMonths();
+		int weeks   = period.getWeeks();
+		int days    = period.getDays();
+		int hours   = period.getHours();
+		int minutes = period.getMinutes();
+		int seconds = period.getSeconds();
 		
 		StringJoiner joiner = new StringJoiner(", ");
 		
-		if (weeks > 0 && weeksB) {
-			joiner.add(weeks + " week" + (weeks > 1 ? "s" : ""));
-		}
-		
-		if (days > 0 && daysB) {
-			joiner.add(days + " day" + (days > 1 ? "s" : ""));
-		}
-		
-		if (hours > 0 && hoursB) {
-			joiner.add(hours + " hour" + (hours > 1 ? "s" : ""));
-		}
-		
-		if (min > 0 && minsB) {
-			joiner.add(min + " minute" + (min > 1 ? "s" : ""));
-		}
-		
-		if (sec > 0 && seconds) {
-			joiner.add(sec + " second" + (sec > 1 ? "s" : ""));
-		}
-		
+		if (years   > 0 && yearsB)   joiner.add(years + " year" +     (years > 1 ? "s" : ""));
+		if (months  > 0 && monthsB)  joiner.add(months + " month" +   (months > 1 ? "s" : ""));
+		if (weeks   > 0 && weeksB)   joiner.add(weeks + " week" +     (weeks > 1 ? "s" : ""));
+		if (days    > 0 && daysB)    joiner.add(days + " day" +       (days > 1 ? "s" : ""));
+		if (hours   > 0 && hoursB)   joiner.add(hours + " hour" +     (hours > 1 ? "s" : ""));
+		if (minutes > 0 && minsB)    joiner.add(minutes + " minute" + (minutes > 1 ? "s" : ""));
+		if (seconds > 0 && secondsB) joiner.add(seconds + " second" + (seconds > 1 ? "s" : ""));
 		
 		return joiner.toString();
 	}
 	
-	public static String getTimeText( long millis, boolean seconds )
+	public static String getTimeText( Date millis, boolean seconds )
 	{
-		return getTimeText(millis, true, true, true, true, seconds);
+		return getTimeText(millis, true, true, true, true, true, true, seconds);
 	}
 	
-	public static class TimeObject
+	public static String getTimeText( Date millis )
 	{
-		private Long time;
-		private String timeName;
-		private ArrayList<String> replaces;
+		return getTimeText(millis, true, true, true, true, true, true, true);
+	}
+	
+	
+	public static String getTimeText( long millis, boolean yearsB, boolean monthsB, boolean weeksB, boolean daysB, boolean hoursB, boolean minsB, boolean secondsB )
+	{
+		return getTimeText(new Date(System.currentTimeMillis() + millis), yearsB, monthsB, weeksB, daysB, hoursB, minsB, secondsB);
+	}
+	
+	public static String getTimeText( long millis, boolean seconds )
+	{
+		return getTimeText(millis, true, true, true, true, true, true, seconds);
+	}
+	
+	public static String getTimeText( long millis )
+	{
+		return getTimeText(millis, true, true, true, true, true, true, true);
+	}
+	
+	
+	public static String getTimeLargestOnly( Date date )
+	{
+		String t = getTimeText(date);
+		String[] tk = t.split(",");
 		
-		public TimeObject( Long time, String timeName, ArrayList<String> replaces )
+		if(tk.length > 0)
 		{
-			this.time = time;
-			this.timeName = timeName;
-			this.replaces = replaces;
+			return tk[0];
 		}
 		
-		public Long getTime()
-		{
-			return time;
-		}
-		
-		public String getTimeName()
-		{
-			return timeName;
-		}
-		
-		public ArrayList<String> getReplaces()
-		{
-			return replaces;
-		}
+		return "";
+	}
+	
+	public static String getTimeLargestOnly( long millis)
+	{
+		return getTimeLargestOnly(new Date(System.currentTimeMillis() + millis));
 	}
 }

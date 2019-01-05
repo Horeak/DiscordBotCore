@@ -14,6 +14,8 @@ import java.text.SimpleDateFormat;
 @Command
 public class BotStatusCommand extends DiscordCommand
 {
+	private static SimpleDateFormat format = new SimpleDateFormat("dd/MM/YYYY");
+	
 	@Override
 	public String commandPrefix() {
 		return "botinfo";
@@ -33,12 +35,6 @@ public class BotStatusCommand extends DiscordCommand
 	
 	@Override
 	public void commandExecuted( IMessage message, String[] args ) {
-		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention(), getBuilder(message, args).build());
-	}
-	
-	private static SimpleDateFormat format = new SimpleDateFormat("dd/MM/YYYY");
-	
-	protected EmbedBuilder getBuilder(IMessage message, String[] args){
 		EmbedBuilder builder = new EmbedBuilder();
 		
 		if(!message.getChannel().isPrivate()){
@@ -55,11 +51,13 @@ public class BotStatusCommand extends DiscordCommand
 		
 		builder.appendField("Uptime", DiscordBotBase.getUpTime(), true);
 		builder.appendField("Ping", Utils.getPing(message) + "ms", true);
+		builder.appendField("Web ping", Utils.getWebResponse() + "ms", true);
+		
 		builder.appendField("Servers", Integer.toString(DiscordBotBase.discordClient.getGuilds().size()), true);
 		builder.appendField("Users", Integer.toString(DiscordBotBase.discordClient.getUsers().size()), true);
 		
 		builder.withThumbnail(DiscordBotBase.discordClient.getOurUser().getAvatarURL());
 		
-		return builder;
+		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention(), builder.build());
 	}
 }

@@ -478,7 +478,7 @@ public class ChatUtils
 		builder1.append(title).append("\n");
 		
 		if(title.length() > 0) {
-			for (int i = 0; i < (longestLine > 0 ? longestLine : title.length()); i++) {
+			for (int i = 0; i < (longestLine > 0 ? longestLine > title.length() ? longestLine : title.length() : title.length()); i++) {
 				boolean isCross = title.length() > i && title.charAt(i) == split.toCharArray()[0];
 				builder1.append(isCross ? cross : line);
 			}
