@@ -26,8 +26,10 @@ import org.reflections.util.ConfigurationBuilder;
 import org.reflections.util.FilterBuilder;
 import sx.blah.discord.api.ClientBuilder;
 import sx.blah.discord.api.IDiscordClient;
+import sx.blah.discord.api.IShard;
 import sx.blah.discord.api.events.Event;
 import sx.blah.discord.api.events.IListener;
+import sx.blah.discord.handle.impl.events.shard.ReconnectSuccessEvent;
 import sx.blah.discord.handle.obj.Permissions;
 import sx.blah.discord.modules.Configuration;
 import sx.blah.discord.util.BotInviteBuilder;
@@ -560,6 +562,10 @@ public class DiscordBotBase
 			
 			initBot();
 			initListeners();
+			
+			for(IShard shard : discordClient.getShards()) {
+				discordClient.getDispatcher().dispatch(new ReconnectSuccessEvent(shard));
+			}
 		}
 	}
 	

@@ -11,16 +11,18 @@ public interface ICommandFormatter
 		if ( pos > -1 ) {
 			int start = pos;
 			int openCount = 0;
-			while ( pos < s.length() ) {
+			pos = s.length() - 1;
+			
+			while ( pos >= 0 ) {
 				char currentChar = s.charAt(pos);
 				if ( currentChar == right ) {
 					if ( openCount > 1 ) // if openCount == 1 then correct one
 						openCount--;
 					else
-						return s.substring(start + 1, pos);
+						return s.substring(start + 1, pos - 1);
 				} else if ( currentChar == left )
 					openCount++;
-				pos++;
+				pos--;
 			}
 		}
 		return null;

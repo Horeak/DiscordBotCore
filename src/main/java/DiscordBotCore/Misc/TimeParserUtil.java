@@ -130,6 +130,7 @@ public class TimeParserUtil
 		int hours   = period.getHours();
 		int minutes = period.getMinutes();
 		int seconds = period.getSeconds();
+		int millis = period.getMillis();
 		
 		StringJoiner joiner = new StringJoiner(", ");
 		
@@ -140,6 +141,10 @@ public class TimeParserUtil
 		if (hours   > 0 && hoursB)   joiner.add(hours + " hour" +     (hours > 1 ? "s" : ""));
 		if (minutes > 0 && minsB)    joiner.add(minutes + " minute" + (minutes > 1 ? "s" : ""));
 		if (seconds > 0 && secondsB) joiner.add(seconds + " second" + (seconds > 1 ? "s" : ""));
+		
+		if (joiner.toString().isEmpty() && millis > 0){
+			joiner.add(seconds + " millisecond "+ (millis > 1 ? "s" : ""));
+		}
 		
 		return joiner.toString();
 	}

@@ -1,6 +1,7 @@
 import DiscordBotCore.CommandFiles.DiscordCommand;
 import DiscordBotCore.Main.DiscordBotBase;
 import DiscordBotCore.Misc.Annotation.Command;
+import DiscordBotCore.Misc.Annotation.Debug;
 import DiscordBotCore.Misc.Annotation.SubCommand;
 import org.junit.Assert;
 import org.junit.Test;
@@ -24,18 +25,22 @@ public class Tests
 		Set<Class<?>> subCommands = DiscordBotBase.getReflection().getTypesAnnotatedWith(SubCommand.class);
 		
 		commands1.forEach((c) -> {
-			try {
-				c.newInstance();
-			} catch (InstantiationException | IllegalAccessException e) {
-				Assert.fail("Init error with command: \"" + c.getName() + "\"");
+			if(!c.isAnnotationPresent(Debug.class)) {
+				try {
+					c.newInstance();
+				} catch (InstantiationException | IllegalAccessException e) {
+					Assert.fail("Init error with command: \"" + c.getName() + "\"");
+				}
 			}
 		});
 		
 		subCommands.forEach((c) -> {
-			try {
-				c.newInstance();
-			} catch (InstantiationException | IllegalAccessException e) {
-				Assert.fail("Init error with command: \"" + c.getName() + "\"");
+			if(!c.isAnnotationPresent(Debug.class)) {
+				try {
+					c.newInstance();
+				} catch (InstantiationException | IllegalAccessException e) {
+					Assert.fail("Init error with command: \"" + c.getName() + "\"");
+				}
 			}
 		});
 	}
@@ -55,15 +60,21 @@ public class Tests
 		ArrayList<DiscordCommand> commands = new ArrayList<>();
 		
 		commands1.forEach((c) -> {
-			try {
-				commands.add((DiscordCommand) c.newInstance());
-			} catch (InstantiationException | IllegalAccessException ignored) { }
+			if(!c.isAnnotationPresent(Debug.class)) {
+				try {
+					commands.add((DiscordCommand) c.newInstance());
+				} catch (InstantiationException | IllegalAccessException ignored) {
+				}
+			}
 		});
 		
 		subCommands.forEach((c) -> {
-			try {
-				commands.add((DiscordCommand) c.newInstance());
-			} catch (InstantiationException | IllegalAccessException ignored) { }
+			if(!c.isAnnotationPresent(Debug.class)) {
+				try {
+					commands.add((DiscordCommand) c.newInstance());
+				} catch (InstantiationException | IllegalAccessException ignored) {
+				}
+			}
 		});
 		
 		boolean hasMissing = false;

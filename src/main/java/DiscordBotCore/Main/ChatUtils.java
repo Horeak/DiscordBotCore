@@ -148,6 +148,7 @@ public class ChatUtils
 			
 			Requests.executeRequest(() -> {
 				if (builder.getContent() != null && !builder.getContent().isEmpty() && builder.getChannel() != null) {
+					while(!builder.getChannel().getShard().isReady()) Thread.sleep(1);
 					message1[ 0 ] = builder.build();
 				}
 				
@@ -250,18 +251,23 @@ public class ChatUtils
 							"User-Agent",
 							"Mozilla/5.0 (Windows NT 6.3; WOW64; rv:37.0) Gecko/20100101 Firefox/37.0");
 					
-					BufferedImage bimg = ImageIO.read(connection.getInputStream());
-					int width          = bimg.getWidth();
-					int height         = bimg.getHeight();
-					
-					if(width > 700 || height > 700){
-						small = false;
-					}
-					
-					if(small){
-						builder.withThumbnail(image);
-					}else{
-						builder.withImage(image);
+					try {
+						BufferedImage bimg = ImageIO.read(connection.getInputStream());
+						int width = bimg.getWidth();
+						int height = bimg.getHeight();
+						
+						if (width > 700 || height > 700) {
+							small = false;
+						}
+						
+						if (small) {
+							builder.withThumbnail(image);
+						} else {
+							builder.withImage(image);
+						}
+					}catch (Exception e){
+//						DiscordBotBase.handleException(e);
+						//URL wasnt a image. Simply dont include it
 					}
 				}
 				
@@ -348,9 +354,9 @@ public class ChatUtils
 		RequestBuffer.request(() -> {
 			try {
 				if(finalChannel == null || object == null) return;
-				
+				while(!finalChannel.getShard().isReady()) Thread.sleep(1);
 				message[ 0 ] = finalChannel.sendMessage(title, object, tts);
-			} catch (DiscordException | MissingPermissionsException e) {
+			} catch (DiscordException | MissingPermissionsException | InterruptedException e) {
 				DiscordBotBase.handleException(e);
 			}
 		});

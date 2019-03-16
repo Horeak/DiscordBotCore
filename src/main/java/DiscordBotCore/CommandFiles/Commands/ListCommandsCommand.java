@@ -14,7 +14,7 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Command
@@ -34,7 +34,7 @@ public class ListCommandsCommand extends DiscordCommand
 		
 		String arg = String.join(" ", args);
 		
-		ConcurrentHashMap<String, CopyOnWriteArrayList<DiscordCommand>> commands = new ConcurrentHashMap<>();
+		TreeMap<String, CopyOnWriteArrayList<DiscordCommand>> commands = new TreeMap<>();
 		
 		for (Map.Entry<String, DiscordCommand> ent : CommandUtils.discordChatCommands.entrySet()) {
 			String category = CommandUtils.getCommandCategory(ent.getValue());

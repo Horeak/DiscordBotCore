@@ -28,6 +28,18 @@ public class PingCommand extends DiscordCommand
 	}
 	
 	@Override
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	{
+		return "ping";
+	}
+	
+	@Override
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Shows the current ping of the bot";
+	}
+	
+	@Override
 	public void commandExecuted( IMessage message, String[] args )
 	{
 		ChatUtils.sendMessage(message.getChannel(), "Response in *" + Utils.getPing(message) + " ms*");

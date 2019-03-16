@@ -23,6 +23,12 @@ public class MembersCommand extends DiscordCommand
 	}
 	
 	@Override
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	{
+		return "members";
+	}
+	
+	@Override
 	public String commandPrefix() {
 		return "members";
 	}

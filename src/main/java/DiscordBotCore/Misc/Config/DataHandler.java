@@ -20,6 +20,8 @@ import java.util.concurrent.*;
 
 public class DataHandler
 {
+	//TODO Find a way to store value as comparable hash or similar smaller value then the json value of the object
+	
 	private static CopyOnWriteArrayList<Field> objects = new CopyOnWriteArrayList<>();
 	private static ConcurrentHashMap<Field, String> values = new ConcurrentHashMap<>();
 	private static ConcurrentHashMap<Field, Class> fieldClasses = new ConcurrentHashMap<>();

@@ -28,6 +28,18 @@ public class BotStatusCommand extends DiscordCommand
 	}
 	
 	@Override
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return super.getShortDescription(sourceCommand, callerMessage);
+	}
+	
+	@Override
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	{
+		return "botinfo";
+	}
+	
+	@Override
 	public String getCategory()
 	{
 		return "info commands";

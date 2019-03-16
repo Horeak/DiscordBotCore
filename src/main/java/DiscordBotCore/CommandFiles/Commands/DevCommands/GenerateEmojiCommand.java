@@ -1,5 +1,6 @@
 package DiscordBotCore.CommandFiles.Commands.DevCommands;
 
+import DiscordBotCore.CommandFiles.DiscordCommand;
 import DiscordBotCore.DeveloperSystem.DevCommandBase;
 import DiscordBotCore.Main.ChatUtils;
 import DiscordBotCore.Main.Utils;
@@ -17,6 +18,24 @@ import java.util.List;
 @Command
 public class GenerateEmojiCommand extends DevCommandBase
 {
+	@Override
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	{
+		return "genEmoji <url/image> <name>";
+	}
+	
+	@Override
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "[DEV]Generates emoji from image link";
+	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return super.getDescription(sourceCommand, callerMessage);
+	}
+	
 	@Override
 	public void commandExecuted( IMessage message, String[] args )
 	{

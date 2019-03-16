@@ -25,6 +25,17 @@ public class RolesDebugCommand extends DevCommandBase
 		return "Lists all role ids";
 	}
 	
+	@Override
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	{
+		return "roles";
+	}
+	
+	@Override
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return super.getShortDescription(sourceCommand, callerMessage);
+	}
 	
 	@Override
 	public void commandExecuted( IMessage message, String[] args )

@@ -46,13 +46,19 @@ public class IgnoredRolesCommand extends DiscordCommand
 	@Override
 	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 	{
-		return "A regex system to allow ignoring specific roles from the permission system in the bot";
+		return "A regex system to allow ignoring specific roles from the command permission system in the bot, therefor prev";
 	}
 	
 	@Override
 	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 	{
 		return "Filter out roles from role checks";
+	}
+	
+	@Override
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	{
+		return "ignoredRoles <add/remove>";
 	}
 	
 	@Override
@@ -132,6 +138,12 @@ public class IgnoredRolesCommand extends DiscordCommand
 		}
 		
 		@Override
+		public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+		{
+			return "remove <role regex>";
+		}
+		
+		@Override
 		public void commandExecuted( IMessage message, String[] args )
 		{
 			String text = String.join(" ", args);
@@ -165,6 +177,12 @@ public class IgnoredRolesCommand extends DiscordCommand
 		public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 		{
 			return "Adds a regex string which is used to filter out roles for permissions on commands";
+		}
+		
+		@Override
+		public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+		{
+			return "add <role regex>";
 		}
 		
 		@Override
@@ -243,6 +261,18 @@ public class IgnoredRolesCommand extends DiscordCommand
 		public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 		{
 			return "Lists all excluded roles";
+		}
+		
+		@Override
+		public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+		{
+			return "roles";
+		}
+		
+		@Override
+		public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return super.getShortDescription(sourceCommand, callerMessage);
 		}
 	}
 }

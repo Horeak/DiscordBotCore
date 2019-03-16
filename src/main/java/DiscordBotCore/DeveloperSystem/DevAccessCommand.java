@@ -27,6 +27,18 @@ public class DevAccessCommand extends DevCommandBase
 	}
 	
 	@Override
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	{
+		return "devaccess <grant/revoke> <user>";
+	}
+	
+	@Override
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return "Grant/Revoke dev status of a specific user";
+	}
+	
+	@Override
 	public void commandExecuted( IMessage message, String[] args )
 	{
 		ChatUtils.sendMessage(message.getChannel(), message.getAuthor().mention() + " Use this command to grant or revoke dev access");
@@ -51,6 +63,18 @@ public class DevAccessCommand extends DevCommandBase
 		public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 		{
 			return "Grants dev status";
+		}
+		
+		@Override
+		public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+		{
+			return "grant <user>";
+		}
+		
+		@Override
+		public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return super.getShortDescription(sourceCommand, callerMessage);
 		}
 		
 		@Override
@@ -105,6 +129,18 @@ public class DevAccessCommand extends DevCommandBase
 		public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 		{
 			return "Revoke dev status";
+		}
+		
+		@Override
+		public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+		{
+			return "revoke <user>";
+		}
+		
+		@Override
+		public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return super.getShortDescription(sourceCommand, callerMessage);
 		}
 		
 		@Override

@@ -16,9 +16,15 @@ import java.util.EnumSet;
 public class CommandToggle extends DiscordCommand
 {
 	@Override
-	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
 	{
 		return "Enable/Disable commands in current server";
+	}
+	
+	@Override
+	public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return getDescription(sourceCommand, callerMessage);
 	}
 	
 	@Override
@@ -93,6 +99,24 @@ public class CommandToggle extends DiscordCommand
 		{
 			return false;
 		}
+		
+		@Override
+		public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+		{
+			return "enable <command>";
+		}
+		
+		@Override
+		public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return "Re-enables a command from the bot on the current server";
+		}
+		
+		@Override
+		public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return super.getDescription(sourceCommand, callerMessage);
+		}
 	}
 	
 	@SubCommand(parent = CommandToggle.class)
@@ -115,6 +139,24 @@ public class CommandToggle extends DiscordCommand
 		public boolean canBeDisabled()
 		{
 			return false;
+		}
+		
+		@Override
+		public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+		{
+			return "disable <command>";
+		}
+		
+		@Override
+		public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return "Disables a command from the bot on the current server";
+		}
+		
+		@Override
+		public String getShortDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+		{
+			return super.getDescription(sourceCommand, callerMessage);
 		}
 	}
 	

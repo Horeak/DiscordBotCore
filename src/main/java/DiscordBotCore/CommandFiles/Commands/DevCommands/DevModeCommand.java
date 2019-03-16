@@ -21,6 +21,18 @@ public class DevModeCommand extends DevCommandBase {
 	}
 	
 	@Override
+	public String getUsage( DiscordCommand sourceCommand, IMessage callMessage )
+	{
+		return "devMode";
+	}
+	
+	@Override
+	public String getDescription( DiscordCommand sourceCommand, IMessage callerMessage )
+	{
+		return super.getShortDescription(sourceCommand, callerMessage);
+	}
+	
+	@Override
 	public void commandExecuted( IMessage message, String[] args ) {
 		DiscordBotBase.devMode ^= true;
 		

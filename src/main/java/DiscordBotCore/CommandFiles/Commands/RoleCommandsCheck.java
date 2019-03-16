@@ -117,7 +117,7 @@ public class RoleCommandsCheck extends DiscordCommand
 	@Override
 	public String getCategory()
 	{
-		return "info commands";
+		return "settings";
 	}
 	
 	@Override
