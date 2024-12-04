@@ -28,7 +28,8 @@ This repository contains an early iteration of a Discord bot framework. While fu
 
 ### Prerequisites
 
-- **Node.js**: Version 16 or higher.
+- **Java Development Kit (JDK)**: Ensure JDK 8 or higher is installed.
+- **Maven**: Used for building and managing dependencies.
 - **Discord Developer Account**: Set up a bot via the [Discord Developer Portal](https://discord.com/developers/applications).
 
 ### Setup
@@ -40,11 +41,15 @@ This repository contains an early iteration of a Discord bot framework. While fu
    cd DiscordBotCore
    ```
 
-2. **Install Dependencies**:
+2. **Build the Project**:
+
+   Compile and package the bot using Maven:
 
    ```bash
-   npm install
+   mvn clean package
    ```
+
+   This will create a `.jar` file in the `target` directory.
 
 3. **Configure Environment Variables**:
 
@@ -56,15 +61,17 @@ This repository contains an early iteration of a Discord bot framework. While fu
 
    Replace `your_bot_token_here` with your Discord bot token.
 
-4. **Start the Bot**:
+4. **Run the Bot**:
+
+   Execute the compiled JAR file:
 
    ```bash
-   npm start
+   java -jar target/DiscordBotCore-1.0-SNAPSHOT.jar
    ```
 
 ## Usage
 
-After starting the bot, use the bot's prefix (as defined in the code) to interact with available commands. Note that this codebase primarily serves as a foundational framework for further development and lacks advanced features.
+After starting the bot, use the defined commands (as implemented in the code) to interact with it. This repository serves as a framework and may require additional customization or feature implementation for specific use cases.
 
 ## Contributing
 
